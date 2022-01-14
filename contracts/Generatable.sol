@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 
-contract Generator {
+contract Generatable {
     uint private id;
 
     function unique() internal returns (uint) {

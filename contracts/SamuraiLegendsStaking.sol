@@ -39,10 +39,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Generator.sol";
+import "./Recoverable.sol";
+import "./Generatable.sol";
 import "./Array.sol";
 
-contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
+// TODO APR
+
+contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     using Array for uint[];
 
     IERC20 private immutable _smg;
@@ -59,12 +62,13 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
     uint private _lastRewardPerTokenPaid;
     mapping(address => uint) private _userRewardPerTokenPaid;
 
+    uint256[] fee = [0, 1000]; // [numerator, denominator]
+
     struct PendingAmount {
         uint createdAt;
         uint fullAmount;
         uint claimedAmount;
-    }    
-
+    }
 
     uint constant public pendingPeriod = 120 seconds;
     mapping(address => uint[]) private _userPendingIds;
@@ -138,7 +142,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         _;
     }
 
-    function stake(uint amount) external whenNotPaused updateReward(msg.sender) {
+    function stake(uint amount) public whenNotPaused updateReward(msg.sender) {
         // checks
         require(amount > 0, "Invalid input amount.");
 
@@ -165,12 +169,23 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         emit PendingCreated(msg.sender, block.timestamp, amount);
     }
 
-    function withdraw(uint amount) external updateReward(msg.sender) {
-        // checks
-        require(_userStake[msg.sender] > 0, "User have no active stake.");
-        require(amount > 0 && _userStake[msg.sender] >= amount, "Invalid input amount.");
+    function cancelPending(uint index) external whenNotPaused {
+        PendingAmount memory pendingAmount = userPending(msg.sender, index);
+        uint amount = pendingAmount.fullAmount - pendingAmount.claimedAmount;
+        deletePending(index);
+        stake(amount);
 
+        emit PendingCanceled(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
+    }
 
+    function deletePending(uint index) internal {
+        uint[] storage ids = _userPendingIds[msg.sender];
+        uint id = ids[index];
+        ids.remove(index);
+        delete _userPending[msg.sender][id];
+    }
+
+    function _withdraw(uint amount) internal {
         // effects
         _totalStake -= amount;
         _userStake[msg.sender] -= amount;
@@ -180,21 +195,25 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function withdrawAll() external updateReward(msg.sender) {
+    function withdraw(uint amount) external updateReward(msg.sender) {
         // checks
-        uint amount = _userStake[msg.sender];
+        require(_userStake[msg.sender] > 0, "User has no active stake.");
+        require(amount > 0 && _userStake[msg.sender] >= amount, "Invalid input amount.");
 
         // effects
-        _totalStake -= amount;
-        _userStake[msg.sender] -= amount;
+        _withdraw(amount);
+    }
 
-        createPending(amount);
-
-        emit Withdrawn(msg.sender, amount);
+    function withdrawAll() external updateReward(msg.sender) {
+        _withdraw(_userStake[msg.sender]);
     }
 
     function getClaimablePendingPortion(uint createdAt) internal view returns (uint) {
         return (((block.timestamp - createdAt) * 100) / pendingPeriod) / 25; // 0 1 2 3 4
+    }
+
+    function setFee(uint numerator, uint denominator) external onlyOwner {
+        fee = [numerator, denominator];
     }
 
     function claim(uint index) external {
@@ -202,7 +221,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         uint id = _userPendingIds[msg.sender][index];
         PendingAmount storage pendingAmount = _userPending[msg.sender][id];
 
-        // Get available claim
+        // Get claimable pending portion
         uint n = getClaimablePendingPortion(pendingAmount.createdAt);
         require(n != 0, "Claim is still pending.");
 
@@ -217,22 +236,24 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         
         // effects
         if (n >= 4) { // Pending is completely done | Remove Pending
-            _userPendingIds[msg.sender].remove(index);
-            delete _userPending[msg.sender][id];
-            emit PendingFinished(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
+            uint createdAt = pendingAmount.createdAt;
+            uint fullAmount = pendingAmount.fullAmount;
+            deletePending(index);
+            emit PendingFinished(msg.sender, createdAt, fullAmount);
         } else { // Pending is partially done | Update Pending
             pendingAmount.claimedAmount += amount;
             emit PendingUpdated(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
         }
         
         // interactions
-        require(_smg.transfer(msg.sender, amount), "Transfer failed.");
+        uint feeAmount = amount * fee[0] / fee[1];
+        require(_smg.transfer(msg.sender, amount - feeAmount), "Transfer failed.");
 
         emit Claimed(msg.sender, amount);
     }
 
     function addReward(uint _reward) external onlyOwner updateReward(address(0)) {
-        require(_reward > 0, "Invalid input.");
+        require(_reward > 0, "Invalid input amount.");
 
         if (block.timestamp > _rewardFinishedAt) { // Reward duration finished
             rewardRate = _reward / rewardDuration;
@@ -247,6 +268,23 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
         require(_smg.transferFrom(owner(), address(this), _reward), "Transfer failed.");
 
         emit RewardAdded(_reward);
+    }
+
+    function decreaseReward(uint _reward) external onlyOwner updateReward(address(0)) {
+        require(_reward > 0, "Invalid input amount.");
+        require(rewardRate != 0, "No rewards to decrease.");
+
+        uint remainingReward = rewardRate * (_rewardFinishedAt - block.timestamp);
+        require(remainingReward > _reward, "Invalid input amount.");
+    
+        uint rewardRate = (remainingReward - _reward) / rewardDuration;
+
+        _rewardUpdatedAt = block.timestamp;
+        _rewardFinishedAt = block.timestamp + rewardDuration;
+
+        require(_smg.transfer(owner(), _reward), "Transfer failed.");
+
+        emit RewardDecreased(_reward);
     }
 
     function updateRewardDuration(uint _rewardDuration) external onlyOwner {
@@ -269,8 +307,10 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generator {
     event PendingCreated(address indexed account, uint createdAt, uint amount);
     event PendingUpdated(address indexed account, uint createdAt, uint amount);
     event PendingFinished(address indexed account, uint createdAt, uint amount);
+    event PendingCanceled(address indexed account, uint createdAt, uint amount);
     event Withdrawn(address indexed account, uint amount);
     event Claimed(address indexed account, uint amount);
     event RewardAdded(uint amount);
+    event RewardDecreased(uint amount);
     event RewardDurationUpdated(uint duration);
 }
