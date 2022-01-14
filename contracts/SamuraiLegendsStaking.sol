@@ -45,8 +45,6 @@ import "./Recoverable.sol";
 import "./Generatable.sol";
 import "./Array.sol";
 
-// TODO APR
-
 contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     using Array for uint[];
 
@@ -64,7 +62,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     uint private _lastRewardPerTokenPaid;
     mapping(address => uint) private _userRewardPerTokenPaid;
 
-    uint256[] fee = [0, 1000]; // [numerator, denominator]
+    uint256[] public fee = [0, 1000]; // [numerator, denominator]
 
     struct PendingAmount {
         uint createdAt;
