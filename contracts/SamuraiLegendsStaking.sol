@@ -1,42 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
-//      .....................................................                      
-//     . ...........................................................               
-// .....................................................................           
-// ..................................................,.................... ....    
-// ......................................##((#..,,,,,,,,......................     
-// ....................................&@@&@%%&&.,,,,,,,.....................      
-// ...........................,.,..,%(@@@@&.&&%##/(,,,......................... .  
-// ........................,,,,...&@@@@#@ ....@/##%&@..........................    
-// .................,....,,,,,,%*@@@@%..,,,,,,,, &&%#%((...........................
-// ................,.,,,,,,,.@@@@@#@ ,,,,,@%@.,,,. @(%%&&&.........................
-// .............,,,,,,,,,,##@&@&%.,,,,,(%@@@@@#(..... %@@@@/#......................
-// ..............,,,,,,.&&@&@(@.,,,,,@%@@@@ &@@@&@.,,.. &/&&@@@....................
-// ...........,,,,,,,(%&&&@& ,,,,,,@#&&@@,,,, @@@@%&..,... @@&&@((.,,..............
-// ...........,,,,.@@@&@#@.,,,,,@&/,,*@&&&%@(@@@&(..*@@.,,,..&(&&@@@...............
-// ..........,,,(&@@@@@ ,,,,,/@@@@@&@%%@@(@@&/@%#%@%@@@@&#,,,,. @@@@@#(............
-// ...........@@@@@&@.,,,,,@&@@@@&%@@@@*,.*@/.,,@@@@#@@@@@&@.,,,..&(@@@@@..........
-// ........%&@@@@&.,,,,,,&@@@%%.,,, @@@@&&,,,@%@@@@.,,,.&*@@@&*,,,.. @@@@@&#.......
-// .......... @@@@@@&,,,,,.@&@@@@%&@@@&*.,,@*,.*@@@@%&@@@@&@ ,,,..&(@@@@@ .........
-// .........,,,.&@@@@@@,,,,,,*@@@@@&@@@@@&@@@&@@@@@%@@@@%%,,,,, @@@@@(@............
-// .........,,,,,, @@@@@@&,,,,, @@*..,@@@@&@%@@@@/,,*@@ ,,,,,&(@@@@@ ..............
-// ........,,,,,,,,,.&@@@@@@,,,,,,.&&@@@@ .,. @@@@&@,,,,,,.@@@@@(@.................
-// ........,,,,,,,,,,,, @&@@@@&,,,,, @&@@@@.@@@@&@ ,,,,.%(@@@@@ ...................
-// ........,,,,,,,,,,,,,,.&@@@@@@,,.,..*&@@@@@&/,,,,,.@@@@@(@......................
-// .........,,,,,,,,,,,,,,,, @&@@@@&.,,.. @%@.,,,,.#%@@@@& ........................
-// ..........,,,,,,,,,,,,,,,,,.&&&@@@@...,,,,,,,.@@@@&#&...........................
-// .......,...,,,,,,,,,,,,,,,,,.. &%&&@@&,,,,,%&&&&@% .............................
-// ............,,,,,,,,,,,,,,,,.... &@&&@@&.&@&&&%&................................
-// .................,,,,,,,,,,........ &%&&@&&&% ..................................
-// .....................,,,,,.........,,.&&%&@...................................  
-// ..................................,,,,.. ....................................   
-// ..................................,,.......................................     
-// .........................................................................                     
-
-// tg: https://t.me/samurailegends
-// authors: Leo, David
+/**
+     .....................................................                      
+    . ...........................................................               
+.....................................................................           
+..................................................,.................... ....    
+......................................##((#..,,,,,,,,......................     
+....................................&@@&@%%&&.,,,,,,,.....................      
+...........................,.,..,%(@@@@&.&&%##/(,,,......................... .  
+........................,,,,...&@@@@#@ ....@/##%&@..........................    
+.................,....,,,,,,%*@@@@%..,,,,,,,, &&%#%((...........................
+................,.,,,,,,,.@@@@@#@ ,,,,,@%@.,,,. @(%%&&&.........................
+.............,,,,,,,,,,##@&@&%.,,,,,(%@@@@@#(..... %@@@@/#......................
+..............,,,,,,.&&@&@(@.,,,,,@%@@@@ &@@@&@.,,.. &/&&@@@....................
+...........,,,,,,,(%&&&@& ,,,,,,@#&&@@,,,, @@@@%&..,... @@&&@((.,,..............
+...........,,,,.@@@&@#@.,,,,,@&/,,*@&&&%@(@@@&(..*@@.,,,..&(&&@@@...............
+..........,,,(&@@@@@ ,,,,,/@@@@@&@%%@@(@@&/@%#%@%@@@@&#,,,,. @@@@@#(............
+...........@@@@@&@.,,,,,@&@@@@&%@@@@*,.*@/.,,@@@@#@@@@@&@.,,,..&(@@@@@..........
+........%&@@@@&.,,,,,,&@@@%%.,,, @@@@&&,,,@%@@@@.,,,.&*@@@&*,,,.. @@@@@&#.......
+.......... @@@@@@&,,,,,.@&@@@@%&@@@&*.,,@*,.*@@@@%&@@@@&@ ,,,..&(@@@@@ .........
+.........,,,.&@@@@@@,,,,,,*@@@@@&@@@@@&@@@&@@@@@%@@@@%%,,,,, @@@@@(@............
+.........,,,,,, @@@@@@&,,,,, @@*..,@@@@&@%@@@@/,,*@@ ,,,,,&(@@@@@ ..............
+........,,,,,,,,,.&@@@@@@,,,,,,.&&@@@@ .,. @@@@&@,,,,,,.@@@@@(@.................
+........,,,,,,,,,,,, @&@@@@&,,,,, @&@@@@.@@@@&@ ,,,,.%(@@@@@ ...................
+........,,,,,,,,,,,,,,.&@@@@@@,,.,..*&@@@@@&/,,,,,.@@@@@(@......................
+.........,,,,,,,,,,,,,,,, @&@@@@&.,,.. @%@.,,,,.#%@@@@& ........................
+..........,,,,,,,,,,,,,,,,,.&&&@@@@...,,,,,,,.@@@@&#&...........................
+.......,...,,,,,,,,,,,,,,,,,.. &%&&@@&,,,,,%&&&&@% .............................
+............,,,,,,,,,,,,,,,,.... &@&&@@&.&@&&&%&................................
+.................,,,,,,,,,,........ &%&&@&&&% ..................................
+.....................,,,,,.........,,.&&%&@...................................  
+..................................,,,,.. ....................................   
+..................................,,.......................................     
+.........................................................................           
+*/  
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -45,14 +43,37 @@ import "./Recoverable.sol";
 import "./Generatable.sol";
 import "./Array.sol";
 
+
+struct Fee {
+    uint numerator;
+    uint denominator;
+}
+
+struct PendingPeriod {
+    uint repeat;
+    uint period;
+}
+
+struct PendingAmount {
+    uint createdAt;
+    uint fullAmount;
+    uint claimedAmount;
+    PendingPeriod pendingPeriod;
+}
+
+/**
+@title SamuraiLegendsStaking
+@author Leo
+@notice Stake any ERC20 token in a auto-compounding way using this contract
+*/
 contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     using Array for uint[];
 
-    IERC20 private immutable _smg;
+    IERC20 private immutable _token;
 
     uint public rewardRate;
-    uint public rewardDuration = 60 seconds;
-    uint private _rewardUpdatedAt = block.timestamp;
+    uint public rewardDuration = 20 seconds;
+    uint private _rewardUpdatedAt = uint(block.timestamp);
     uint private _rewardFinishedAt;
 
     uint private _totalStake;
@@ -62,48 +83,81 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     uint private _lastRewardPerTokenPaid;
     mapping(address => uint) private _userRewardPerTokenPaid;
 
-    uint256[] public fee = [0, 1000]; // [numerator, denominator]
+    Fee public fee = Fee(0, 1000);
 
-    struct PendingAmount {
-        uint createdAt;
-        uint fullAmount;
-        uint claimedAmount;
-    }
-
-    uint constant public pendingPeriod = 120 seconds;
+    PendingPeriod public pendingPeriod = PendingPeriod({ repeat: 4, period: 20 seconds });
     mapping(address => uint[]) private _userPendingIds;
     mapping(address => mapping(uint => PendingAmount)) private _userPending;
 
+    /**
+    @param token The ERC20 token address to enable staking for
+    */
     constructor(IERC20 token) {
-        _smg = token;
+        _token = token;
     }
 
+    /**
+    @notice compute the compounded total stake in real-time
+    @return totalStake The current compounded total stake
+    */
     function totalStake() public view returns (uint) {
         return _totalStake + _earned(_totalStake, _lastRewardPerTokenPaid);
     }
 
+    /**
+    @notice compute the compounded user stake in real-time
+    @param account The user address to use
+    @return userStake The current compounded user stake
+    */
     function userStake(address account) public view returns (uint) {
         return _userStake[account] + earned(account);
     }
 
+    /**
+    @notice return the user pending amount metadata 
+    @param account The user address to use
+    @param index The user pending index to use
+    @return pendingAmount The user pending amount metadata 
+    */
     function userPending(address account, uint index) public view returns (PendingAmount memory) {
         uint id = _userPendingIds[account][index];
         return _userPending[account][id];
     }
 
+    /**
+    @notice compute the user claimable pending percentage
+    @param account The user address to use
+    @param index The user pending index to use
+    @dev 18 decimals were used to not lose information
+    @return percentage The user claimable pending percentage
+    */
     function userClaimablePendingPercentage(address account, uint index) public view returns (uint) {
-        uint n = getClaimablePendingPortion(userPending(account, index).createdAt);
-        return n >= 4 ? 100 : n * 25;
+        PendingAmount memory pendingAmount = userPending(account, index);
+        uint n = getClaimablePendingPortion(pendingAmount);
+        return n >= pendingAmount.pendingPeriod.repeat ? 1e18 : (n * 1e18) / pendingAmount.pendingPeriod.repeat;
     }
 
+    /**
+    @notice return the user pending ids
+    @param account The user address to use
+    @return ids The user pending ids
+    */
     function userPendingIds(address account) public view returns (uint[] memory) {
         return _userPendingIds[account];
     }
 
+    /**
+    @notice the last time rewards were updated
+    @return lastTimeRewardActiveAt A timestamp of the last time the update reward modifier was called
+    */
     function lastTimeRewardActiveAt() public view returns (uint) {
-        return _rewardFinishedAt > block.timestamp ? block.timestamp : _rewardFinishedAt;
+        return uint(_rewardFinishedAt > block.timestamp ? block.timestamp : _rewardFinishedAt);
     }
 
+    /**
+    @notice the current reward per token value
+    @return rewardPerToken The accumulated reward per token value
+    */
     function rewardPerToken() internal view returns (uint) {
         if (_totalStake == 0) {
             return _rewardPerToken;
@@ -112,19 +166,42 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         return _rewardPerToken + ((lastTimeRewardActiveAt() - _rewardUpdatedAt) * rewardRate * 1e18) / _totalStake;
     }
 
+    /**
+    @notice the total rewards available
+    @return totalDurationReward The total expected rewards for the current reward duration
+    */
     function totalDurationReward() public view returns (uint) {
         return rewardRate * rewardDuration;
     }
 
+    /**
+    @notice the user earned rewards
+    @param account The user address to use
+    @return earned The user earned rewards
+    */
     function earned(address account) private view returns (uint) {
         return _earned(_userStake[account], _userRewardPerTokenPaid[account]);
     }
 
+    /**
+    @notice the accumulated rewards for a given staking amount
+    @param stakeAmount The staked token amount
+    @param rewardPerTokenPaid The already paid reward per token
+    @return _earned The earned rewards based on a staking amount and the reward per token paid
+    */
     function _earned(uint stakeAmount, uint rewardPerTokenPaid) internal view returns (uint) {
         uint rewardPerTokenDiff = rewardPerToken() - rewardPerTokenPaid;
         return (stakeAmount * rewardPerTokenDiff) / 1e18;
     }
 
+    /**
+    @notice this modifier is used to update the rewards metadata for a specific account
+    @notice it is called for every user or owner interaction that changes the staking, the reward pool or the reward duration
+    @notice this is an extended modifier version of the Synthetix contract to support auto-compounding
+    @notice _rewardPerToken is accumulated every second
+    @notice _rewardUpdatedAt is updated for every interaction with this modifier
+    @param account The user address to use
+    */
     modifier updateReward(address account) {
         _rewardPerToken = rewardPerToken();
         _rewardUpdatedAt = lastTimeRewardActiveAt();
@@ -142,6 +219,10 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         _;
     }
 
+    /**
+    @notice stake an amount of the ERC20 token
+    @param amount The amount to stake
+    */
     function stake(uint amount) public whenNotPaused updateReward(msg.sender) {
         // checks
         require(amount > 0, "Invalid input amount.");
@@ -151,24 +232,32 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         _userStake[msg.sender] += amount;
 
         // interactions
-        require(_smg.transferFrom(msg.sender, address(this), amount), "Transfer failed.");
+        require(_token.transferFrom(msg.sender, address(this), amount), "Transfer failed.");
 
         emit Staked(msg.sender, amount);
     }
 
-
+    /**
+    @notice create a new pending after withdrawal
+    @param amount The amount to create pending for
+    */
     function createPending(uint amount) internal {
         uint id = unique();
         _userPendingIds[msg.sender].push(id);
         _userPending[msg.sender][id] = PendingAmount({  
-            createdAt: block.timestamp, 
-            fullAmount: amount, 
-            claimedAmount: 0
+            createdAt: uint(block.timestamp), 
+            fullAmount: uint(amount), 
+            claimedAmount: 0,
+            pendingPeriod: pendingPeriod
         });
 
         emit PendingCreated(msg.sender, block.timestamp, amount);
     }
 
+    /**
+    @notice cancel an existing pending
+    @param index The pending index to cancel
+    */
     function cancelPending(uint index) external whenNotPaused {
         PendingAmount memory pendingAmount = userPending(msg.sender, index);
         uint amount = pendingAmount.fullAmount - pendingAmount.claimedAmount;
@@ -178,6 +267,10 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         emit PendingCanceled(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
     }
 
+    /**
+    @notice delete an existing pending
+    @param index The pending index to delete
+    */
     function deletePending(uint index) internal {
         uint[] storage ids = _userPendingIds[msg.sender];
         uint id = ids[index];
@@ -185,6 +278,12 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         delete _userPending[msg.sender][id];
     }
 
+    /**
+    @notice withdraw an amount of the ERC20 token
+    @notice when you withdraw a pending will be created for that amount
+    @notice you will be able to claim the pending for after an exact vesting period
+    @param amount The amount to withdraw
+    */
     function _withdraw(uint amount) internal {
         // effects
         _totalStake -= amount;
@@ -195,6 +294,10 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         emit Withdrawn(msg.sender, amount);
     }
 
+    /**
+    @notice withdraw an amount of the ERC20 token
+    @param amount The amount to withdraw
+    */
     function withdraw(uint amount) external updateReward(msg.sender) {
         // checks
         require(_userStake[msg.sender] > 0, "User has no active stake.");
@@ -204,72 +307,114 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         _withdraw(amount);
     }
 
+    /**
+    @notice withdraw the full amount of the ERC20 token
+    */
     function withdrawAll() external updateReward(msg.sender) {
+        // checks
+        require(_userStake[msg.sender] > 0, "User has no active stake.");
+
+        // effects
         _withdraw(_userStake[msg.sender]);
     }
 
-    function getClaimablePendingPortion(uint createdAt) internal view returns (uint) {
-        return (((block.timestamp - createdAt) * 100) / pendingPeriod) / 25; // 0 1 2 3 4
+    /**
+    @notice get the user claimable pending portion
+    @param pendingAmount The pending amount metadata to use
+    */
+    function getClaimablePendingPortion(PendingAmount memory pendingAmount) private view returns (uint) {
+        return (block.timestamp - pendingAmount.createdAt) / pendingAmount.pendingPeriod.period; // 0 1 2 3 4
     }
 
+    /**
+    @notice update the claiming fee
+    @param numerator The fee numerator
+    @param denominator The fee denominator
+    */
     function setFee(uint numerator, uint denominator) external onlyOwner {
-        fee = [numerator, denominator];
+        fee = Fee(numerator, denominator);
     }
 
+    /**
+    @notice user can claim a specific pending by index
+    @param index The pending index to claim
+    */
     function claim(uint index) external {
         // checks
         uint id = _userPendingIds[msg.sender][index];
         PendingAmount storage pendingAmount = _userPending[msg.sender][id];
 
-        // Get claimable pending portion
-        uint n = getClaimablePendingPortion(pendingAmount.createdAt);
+        uint n = getClaimablePendingPortion(pendingAmount);
         require(n != 0, "Claim is still pending.");
 
         uint amount;
-        if (n >= 4) {
+        /**
+        @notice N is the user claimable pending portion
+        @notice checking if user N and the user MAX N are greater than or equal
+        @notice that way we know if want to claim the full amount or just part of it
+        */
+        if (n >= pendingAmount.pendingPeriod.repeat) {
             amount = pendingAmount.fullAmount - pendingAmount.claimedAmount;
         } else {
-            amount = (pendingAmount.fullAmount * n * 25 * 1e16) / 1e18 - pendingAmount.claimedAmount;
+            uint percentage = (n * 1e18) / pendingAmount.pendingPeriod.repeat;
+            amount = (pendingAmount.fullAmount * percentage) / 1e18 - pendingAmount.claimedAmount;
         }
 
         require(amount != 0, "Claim is still pending.");
         
         // effects
-        if (n >= 4) { // Pending is completely done | Remove Pending
+        /**
+        @notice pending is completely done
+        @notice we will remove the pending item
+        */
+        if (n >= pendingAmount.pendingPeriod.repeat) {
             uint createdAt = pendingAmount.createdAt;
             uint fullAmount = pendingAmount.fullAmount;
             deletePending(index);
             emit PendingFinished(msg.sender, createdAt, fullAmount);
-        } else { // Pending is partially done | Update Pending
-            pendingAmount.claimedAmount += amount;
+        } 
+        /**
+        @notice pending is partially done
+        @notice we will update the pending item
+        */
+        else {
+            pendingAmount.claimedAmount += uint(amount);
             emit PendingUpdated(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
         }
         
         // interactions
-        uint feeAmount = amount * fee[0] / fee[1];
-        require(_smg.transfer(msg.sender, amount - feeAmount), "Transfer failed.");
+        uint feeAmount = amount * fee.numerator / fee.denominator;
+        require(_token.transfer(msg.sender, amount - feeAmount), "Transfer failed.");
 
         emit Claimed(msg.sender, amount);
     }
 
+    /**
+    @notice owner can add staking rewards
+    @param _reward The reward amount to add
+    */
     function addReward(uint _reward) external onlyOwner updateReward(address(0)) {
         require(_reward > 0, "Invalid input amount.");
 
         if (block.timestamp > _rewardFinishedAt) { // Reward duration finished
-            rewardRate = _reward / rewardDuration;
+            rewardRate = uint(_reward / rewardDuration);
         } else {
-            uint remainingReward = rewardRate * (_rewardFinishedAt - block.timestamp);
-            rewardRate = (remainingReward + _reward) / rewardDuration;
+            uint remainingReward = uint(rewardRate * (_rewardFinishedAt - block.timestamp));
+            rewardRate = uint((remainingReward + _reward) / rewardDuration);
         }
 
-        _rewardUpdatedAt = block.timestamp;
-        _rewardFinishedAt = block.timestamp + rewardDuration;
+        _rewardUpdatedAt = uint(block.timestamp);
+        _rewardFinishedAt = uint(block.timestamp) + rewardDuration;
 
-        require(_smg.transferFrom(owner(), address(this), _reward), "Transfer failed.");
+        require(_token.transferFrom(owner(), address(this), _reward), "Transfer failed.");
 
         emit RewardAdded(_reward);
     }
 
+    /**
+    @notice owner can decrease staking rewards
+    @param _reward The reward amount to decrease
+    */
     function decreaseReward(uint _reward) external onlyOwner updateReward(address(0)) {
         require(_reward > 0, "Invalid input amount.");
         require(rewardRate != 0, "No rewards to decrease.");
@@ -277,16 +422,21 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         uint remainingReward = rewardRate * (_rewardFinishedAt - block.timestamp);
         require(remainingReward > _reward, "Invalid input amount.");
     
-        uint rewardRate = (remainingReward - _reward) / rewardDuration;
+        rewardRate = uint((remainingReward - _reward) / rewardDuration);
 
-        _rewardUpdatedAt = block.timestamp;
-        _rewardFinishedAt = block.timestamp + rewardDuration;
+        _rewardUpdatedAt = uint(block.timestamp);
+        _rewardFinishedAt = uint(block.timestamp) + rewardDuration;
 
-        require(_smg.transfer(owner(), _reward), "Transfer failed.");
+        require(_token.transfer(owner(), _reward), "Transfer failed.");
 
         emit RewardDecreased(_reward);
     }
 
+    /**
+    @notice owner can update the reward duration
+    @notice it can only be updated if the old reward duration is already finished
+    @param _rewardDuration The reward _rewardDuration to use
+    */
     function updateRewardDuration(uint _rewardDuration) external onlyOwner {
         require(block.timestamp > _rewardFinishedAt, "Reward duration must be finalized.");
 
@@ -295,10 +445,27 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         emit RewardDurationUpdated(_rewardDuration);
     }
 
+    /**
+    @notice owner can update the pending period
+    @notice if we want a vesting period of 28 days 4 times, we can have the repeat as 4 and the period as 7 days
+    @param repeat The number of times to keep a withdrawal pending 
+    @param period The period between each repeat
+    */
+    function updatePendingPeriod(uint repeat, uint period) external onlyOwner {
+        pendingPeriod = PendingPeriod(repeat, period);
+        emit PendingPeriodUpdated(repeat, period);
+    }
+
+    /**
+    @notice owner can pause the staking contract
+    */
     function pause() external whenNotPaused onlyOwner {
         _pause();
     }
 
+    /**
+    @notice owner can resume the staking contract
+    */
     function unpause() external whenPaused onlyOwner {
         _unpause();
     }
@@ -313,4 +480,5 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     event RewardAdded(uint amount);
     event RewardDecreased(uint amount);
     event RewardDurationUpdated(uint duration);
+    event PendingPeriodUpdated(uint repeat, uint period);
 }
