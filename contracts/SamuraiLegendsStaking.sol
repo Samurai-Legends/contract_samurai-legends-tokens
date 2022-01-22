@@ -45,24 +45,24 @@ import "./Array.sol";
 
 
 struct Fee {
-    uint numerator;
-    uint denominator;
+    uint128 numerator;
+    uint128 denominator;
 }
 
 struct PendingPeriod {
-    uint repeat;
-    uint period;
+    uint128 repeat;
+    uint128 period;
 }
 
 struct PendingAmount {
-    uint createdAt;
-    uint fullAmount;
-    uint claimedAmount;
+    uint32 createdAt;
+    uint112 fullAmount;
+    uint112 claimedAmount;
     PendingPeriod pendingPeriod;
 }
 
 /**
-@title SamuraiLegendsStaking
+@title Contract that adds auto-compounding staking functionalities
 @author Leo
 @notice Stake any ERC20 token in a auto-compounding way using this contract
 */
@@ -71,21 +71,21 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
 
     IERC20 private immutable _token;
 
-    uint public rewardRate;
-    uint public rewardDuration = 20 seconds;
-    uint private _rewardUpdatedAt = uint(block.timestamp);
-    uint private _rewardFinishedAt;
+    uint160 public rewardRate;
+    uint32 public rewardDuration = 12 weeks;
+    uint32 private _rewardUpdatedAt = uint32(block.timestamp);
+    uint32 public rewardFinishedAt;
 
     uint private _totalStake;
     mapping(address => uint) private _userStake;
     
-    uint private _rewardPerToken;
-    uint private _lastRewardPerTokenPaid;
+    uint128 private _rewardPerToken;
+    uint128 private _lastRewardPerTokenPaid;
     mapping(address => uint) private _userRewardPerTokenPaid;
 
     Fee public fee = Fee(0, 1000);
 
-    PendingPeriod public pendingPeriod = PendingPeriod({ repeat: 4, period: 20 seconds });
+    PendingPeriod public pendingPeriod = PendingPeriod({ repeat: 4, period: 7 days });
     mapping(address => uint[]) private _userPendingIds;
     mapping(address => mapping(uint => PendingAmount)) private _userPending;
 
@@ -134,7 +134,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     function userClaimablePendingPercentage(address account, uint index) public view returns (uint) {
         PendingAmount memory pendingAmount = userPending(account, index);
         uint n = getClaimablePendingPortion(pendingAmount);
-        return n >= pendingAmount.pendingPeriod.repeat ? 1e18 : (n * 1e18) / pendingAmount.pendingPeriod.repeat;
+        return n >= pendingAmount.pendingPeriod.repeat ? 100 * 1e9 : (n * 100 * 1e9) / pendingAmount.pendingPeriod.repeat;
     }
 
     /**
@@ -151,19 +151,19 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @return lastTimeRewardActiveAt A timestamp of the last time the update reward modifier was called
     */
     function lastTimeRewardActiveAt() public view returns (uint) {
-        return uint(_rewardFinishedAt > block.timestamp ? block.timestamp : _rewardFinishedAt);
+        return rewardFinishedAt > block.timestamp ? block.timestamp : rewardFinishedAt;
     }
 
     /**
     @notice the current reward per token value
     @return rewardPerToken The accumulated reward per token value
     */
-    function rewardPerToken() internal view returns (uint) {
+    function rewardPerToken() public view returns (uint) {
         if (_totalStake == 0) {
             return _rewardPerToken;
         }
 
-        return _rewardPerToken + ((lastTimeRewardActiveAt() - _rewardUpdatedAt) * rewardRate * 1e18) / _totalStake;
+        return _rewardPerToken + ((lastTimeRewardActiveAt() - _rewardUpdatedAt) * rewardRate * 1e9) / _totalStake;
     }
 
     /**
@@ -191,7 +191,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     */
     function _earned(uint stakeAmount, uint rewardPerTokenPaid) internal view returns (uint) {
         uint rewardPerTokenDiff = rewardPerToken() - rewardPerTokenPaid;
-        return (stakeAmount * rewardPerTokenDiff) / 1e18;
+        return (stakeAmount * rewardPerTokenDiff) / 1e9;
     }
 
     /**
@@ -203,8 +203,8 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @param account The user address to use
     */
     modifier updateReward(address account) {
-        _rewardPerToken = rewardPerToken();
-        _rewardUpdatedAt = lastTimeRewardActiveAt();
+        _rewardPerToken = uint128(rewardPerToken());
+        _rewardUpdatedAt = uint32(lastTimeRewardActiveAt());
         
         // auto-compounding
         if (account != address(0)) {
@@ -245,8 +245,8 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         uint id = unique();
         _userPendingIds[msg.sender].push(id);
         _userPending[msg.sender][id] = PendingAmount({  
-            createdAt: uint(block.timestamp), 
-            fullAmount: uint(amount), 
+            createdAt: uint32(block.timestamp), 
+            fullAmount: uint112(amount), 
             claimedAmount: 0,
             pendingPeriod: pendingPeriod
         });
@@ -258,11 +258,14 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @notice cancel an existing pending
     @param index The pending index to cancel
     */
-    function cancelPending(uint index) external whenNotPaused {
+    function cancelPending(uint index) external whenNotPaused updateReward(msg.sender) {
         PendingAmount memory pendingAmount = userPending(msg.sender, index);
         uint amount = pendingAmount.fullAmount - pendingAmount.claimedAmount;
         deletePending(index);
-        stake(amount);
+
+        // effects
+        _totalStake += amount;
+        _userStake[msg.sender] += amount;
 
         emit PendingCanceled(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
     }
@@ -331,8 +334,10 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @param numerator The fee numerator
     @param denominator The fee denominator
     */
-    function setFee(uint numerator, uint denominator) external onlyOwner {
+    function setFee(uint128 numerator, uint128 denominator) external onlyOwner {
+        require(denominator != 0, "Denominator must not equal 0.");
         fee = Fee(numerator, denominator);
+        emit FeeUpdated(numerator, denominator);
     }
 
     /**
@@ -356,8 +361,8 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         if (n >= pendingAmount.pendingPeriod.repeat) {
             amount = pendingAmount.fullAmount - pendingAmount.claimedAmount;
         } else {
-            uint percentage = (n * 1e18) / pendingAmount.pendingPeriod.repeat;
-            amount = (pendingAmount.fullAmount * percentage) / 1e18 - pendingAmount.claimedAmount;
+            uint percentage = (n * 1e9) / pendingAmount.pendingPeriod.repeat;
+            amount = (pendingAmount.fullAmount * percentage) / 1e9 - pendingAmount.claimedAmount;
         }
 
         require(amount != 0, "Claim is still pending.");
@@ -378,7 +383,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         @notice we will update the pending item
         */
         else {
-            pendingAmount.claimedAmount += uint(amount);
+            pendingAmount.claimedAmount += uint112(amount);
             emit PendingUpdated(msg.sender, pendingAmount.createdAt, pendingAmount.fullAmount);
         }
         
@@ -394,42 +399,66 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @param _reward The reward amount to add
     */
     function addReward(uint _reward) external onlyOwner updateReward(address(0)) {
+        // checks
         require(_reward > 0, "Invalid input amount.");
 
-        if (block.timestamp > _rewardFinishedAt) { // Reward duration finished
-            rewardRate = uint(_reward / rewardDuration);
+        if (block.timestamp > rewardFinishedAt) { // Reward duration finished
+            rewardRate = uint160(_reward / rewardDuration);
         } else {
-            uint remainingReward = uint(rewardRate * (_rewardFinishedAt - block.timestamp));
-            rewardRate = uint((remainingReward + _reward) / rewardDuration);
+            uint remainingReward = rewardRate * (rewardFinishedAt - block.timestamp);
+            rewardRate = uint160((remainingReward + _reward) / rewardDuration);
         }
 
-        _rewardUpdatedAt = uint(block.timestamp);
-        _rewardFinishedAt = uint(block.timestamp) + rewardDuration;
+        // effects
+        _rewardUpdatedAt = uint32(block.timestamp);
+        rewardFinishedAt = uint32(block.timestamp + rewardDuration);
 
+        // interactions
         require(_token.transferFrom(owner(), address(this), _reward), "Transfer failed.");
 
         emit RewardAdded(_reward);
     }
 
     /**
-    @notice owner can decrease staking rewards
+    @notice owner can decrease staking rewards only if the duration isn't finished yet
+    @notice decreasing rewards doesn't alter the reward finish time
     @param _reward The reward amount to decrease
     */
     function decreaseReward(uint _reward) external onlyOwner updateReward(address(0)) {
+        // checks
         require(_reward > 0, "Invalid input amount.");
-        require(rewardRate != 0, "No rewards to decrease.");
+        require(block.timestamp <= rewardFinishedAt, "Reward duration finished.");
 
-        uint remainingReward = rewardRate * (_rewardFinishedAt - block.timestamp);
+        uint remainingReward = rewardRate * (rewardFinishedAt - block.timestamp);
         require(remainingReward > _reward, "Invalid input amount.");
-    
-        rewardRate = uint((remainingReward - _reward) / rewardDuration);
 
-        _rewardUpdatedAt = uint(block.timestamp);
-        _rewardFinishedAt = uint(block.timestamp) + rewardDuration;
+        // effects
+        rewardRate = uint160((remainingReward - _reward) / (rewardFinishedAt - block.timestamp));
+        _rewardUpdatedAt = uint32(block.timestamp);
 
+        // interactions
         require(_token.transfer(owner(), _reward), "Transfer failed.");
 
         emit RewardDecreased(_reward);
+    }
+
+    /**
+    @notice owner can rest all rewards and reward finish time back to 0
+    */
+    function resetReward() external onlyOwner updateReward(address(0)) {
+        // effects
+        rewardRate = 0;
+        _rewardUpdatedAt = uint32(block.timestamp);
+        rewardFinishedAt = uint32(block.timestamp);
+
+        // interactions
+        if (rewardFinishedAt > block.timestamp) {
+            uint remainingReward = rewardRate * (rewardFinishedAt - block.timestamp);
+            require(remainingReward > 0, "No remaining rewards.");
+            require(_token.transfer(owner(), remainingReward), "Transfer failed.");
+        }
+
+        emit RewardReseted();
     }
 
     /**
@@ -437,8 +466,8 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @notice it can only be updated if the old reward duration is already finished
     @param _rewardDuration The reward _rewardDuration to use
     */
-    function updateRewardDuration(uint _rewardDuration) external onlyOwner {
-        require(block.timestamp > _rewardFinishedAt, "Reward duration must be finalized.");
+    function updateRewardDuration(uint32 _rewardDuration) external onlyOwner {
+        require(block.timestamp > rewardFinishedAt, "Reward duration must be finalized.");
 
         rewardDuration = _rewardDuration;
 
@@ -451,7 +480,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @param repeat The number of times to keep a withdrawal pending 
     @param period The period between each repeat
     */
-    function updatePendingPeriod(uint repeat, uint period) external onlyOwner {
+    function updatePendingPeriod(uint128 repeat, uint128 period) external onlyOwner {
         pendingPeriod = PendingPeriod(repeat, period);
         emit PendingPeriodUpdated(repeat, period);
     }
@@ -479,6 +508,8 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     event Claimed(address indexed account, uint amount);
     event RewardAdded(uint amount);
     event RewardDecreased(uint amount);
+    event RewardReseted();
     event RewardDurationUpdated(uint duration);
     event PendingPeriodUpdated(uint repeat, uint period);
+    event FeeUpdated(uint numerator, uint denominator);
 }
