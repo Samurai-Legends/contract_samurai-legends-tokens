@@ -446,15 +446,21 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
     @notice owner can rest all rewards and reward finish time back to 0
     */
     function resetReward() external onlyOwner updateReward(address(0)) {
-        // effects
-        rewardRate = 0;
-        _rewardUpdatedAt = uint32(block.timestamp);
-        rewardFinishedAt = uint32(block.timestamp);
-
-        // interactions
-        if (rewardFinishedAt > block.timestamp) {
+        if (rewardFinishedAt <= block.timestamp) {
+            rewardRate = 0;
+            _rewardUpdatedAt = uint32(block.timestamp);
+            rewardFinishedAt = uint32(block.timestamp);
+        } else  {
+            // checks
             uint remainingReward = rewardRate * (rewardFinishedAt - block.timestamp);
             require(remainingReward > 0, "No remaining rewards.");
+
+            // effects
+            rewardRate = 0;
+            _rewardUpdatedAt = uint32(block.timestamp);
+            rewardFinishedAt = uint32(block.timestamp);
+
+            // interactions
             require(_token.transfer(owner(), remainingReward), "Transfer failed.");
         }
 
