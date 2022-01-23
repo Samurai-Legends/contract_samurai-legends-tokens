@@ -224,7 +224,9 @@ describe("SamuraiLegendsStaking", function () {
 
   it("Should let the owner recover stucked ERC20 tokens", async function () {
     expect(await smg.balanceOf(staking.address)).to.not.equal(0);
-    await expect(staking.recoverERC20(smg.address)).to.emit(smg, "Transfer");
+    await expect(
+      staking.recoverERC20(smg.address, await smg.balanceOf(staking.address))
+    ).to.emit(smg, "Transfer");
     expect(await smg.balanceOf(staking.address)).to.equal(0);
   });
 
@@ -332,7 +334,9 @@ describe("SamuraiLegendsStaking", function () {
     );
     expect(await staking.userStake(users[0].address)).to.equal(0);
     expect(await staking.totalStake()).to.equal(0);
-    await expect(staking.recoverERC20(smg.address)).to.emit(smg, "Transfer");
+    await expect(
+      staking.recoverERC20(smg.address, await smg.balanceOf(staking.address))
+    ).to.emit(smg, "Transfer");
 
     for (const user of users) {
       await smg

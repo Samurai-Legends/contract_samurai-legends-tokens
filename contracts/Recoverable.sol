@@ -14,7 +14,8 @@ contract Recoverable is Ownable {
     /**
     @notice Recovers stucked BNB in the contract
     */
-    function recoverBNB() external onlyOwner {
+    function recoverBNB(uint amount) external onlyOwner {
+        require(address(this).balance >= amount, "Invalid input amount.");
         (bool success, ) = payable(owner()).call{value: address(this).balance}("");
         require(success, "Recover failed.");
     }
@@ -23,8 +24,10 @@ contract Recoverable is Ownable {
     @notice Recovers stucked ERC20 token in the contract
     @param token An ERC20 token address
     */
-    function recoverERC20(address token) external onlyOwner {
+    function recoverERC20(address token, uint amount) external onlyOwner {
         IERC20 erc20 = IERC20(token);
-        require(erc20.transfer(owner(), erc20.balanceOf(address(this))), "Recover failed");
+        require(erc20.balanceOf(address(this)) >= amount, "Invalid input amount.");
+
+        require(erc20.transfer(owner(), amount), "Recover failed");
     }
 }
