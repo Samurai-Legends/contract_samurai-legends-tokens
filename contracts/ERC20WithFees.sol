@@ -255,7 +255,7 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
          * if both sender and receiver aren't excluded from paying fees.
          * if either sender or receiver are LP pairs.
          */
-        if (!(isExcludedFromFees(sender) || isExcludedFromFees(recipient)) || isPair[sender] || isPair[recipient]) { 
+        if (!isExcludedFromFees(sender) && !isExcludedFromFees(recipient) && (isPair[sender] || isPair[recipient])) { 
             feeAmount = amount * fee.numerator / fee.denominator;
         }
         _balances[recipient] += amount - feeAmount;
