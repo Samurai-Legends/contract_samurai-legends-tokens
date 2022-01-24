@@ -51,6 +51,8 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
 
     Fee public fee = Fee(0, 1000);
 
+    mapping(address => bool) isPair;
+
     /**
      * @dev Sets the values for {name} and {symbol}.
      *
@@ -249,14 +251,19 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
         
         uint feeAmount = 0;
         /**
-        @notice Checks if the fees should apply or not
-        if both sender and receiver aren't excluded from paying fees
-        if either sender or receiver are LP pairs 
-        */
-        if (!(isExcludedFromFees(sender) || isExcludedFromFees(recipient)) || isPair(sender) || isPair(recipient)) { 
+         * @notice Checks if the fees should apply or not.
+         * if both sender and receiver aren't excluded from paying fees.
+         * if either sender or receiver are LP pairs.
+         */
+        if (!(isExcludedFromFees(sender) || isExcludedFromFees(recipient)) || isPair[sender] || isPair[recipient]) { 
             feeAmount = amount * fee.numerator / fee.denominator;
         }
         _balances[recipient] += amount - feeAmount;
+        
+        /**
+         * @notice Increments Koku's address balance.
+         */
+        _balances[address(this)] += feeAmount;
 
         emit Transfer(sender, recipient, amount);
 
@@ -377,15 +384,34 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
         uint256 amount
     ) internal virtual {}
 
+    /**
+     * @notice Adds fees taxing to liquidity pair.
+     * @param numerator The fee numerator.
+     * @param denominator The fee denominator.
+     */
     function setFee(uint128 numerator, uint128 denominator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(denominator != 0, "Denominator must not equal 0.");
         fee = Fee(numerator, denominator);
         emit FeeUpdated(numerator, denominator);
     }
 
-    function isExcludedFromFees(address account) internal view virtual returns (bool) {}
+    /**
+     * @notice Adds or removes a pair address from getting taxed.
+     * @param pair Pair address.
+     * @param value Boolean value to indicate whether we tax a pair or not.
+     */
+    function setPair(address pair, bool value) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        isPair[pair] = value;
+    }
 
-    function isPair(address account) internal view virtual returns (bool) {}
+    /**
+     * @notice Checks if address is excluded from paying fees.
+     * The excluded addresses for now are the owner and the current KOKU's address.
+     * @param account Address to check.
+     */
+    function isExcludedFromFees(address account) internal view returns (bool) {
+        return account == owner() || account == address(this);  
+    }
 
     event FeeUpdated(uint numerator, uint denominator);
 }

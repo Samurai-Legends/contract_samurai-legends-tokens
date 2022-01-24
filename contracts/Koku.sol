@@ -3,60 +3,146 @@ pragma solidity ^0.8.0;
 
 import "./ERC20WithFees.sol";
 
-interface Factory {
-    function createPair(address tokenA, address tokenB) external returns (address pair);
-}
-
-interface Router {
-    function factory() external pure returns (address);
-}
-
+/**
+ * @title Contract that adds inflation and fees functionalities.
+ * @author Leo
+ */
 contract Koku is ERC20WithFees {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    Router public immutable router;
-    address public immutable tokenA;
-    address public immutable tokenB;
-    address public immutable pair;
+    /**
+     * @notice lastTimeAdminMintedAt The last time an admin minted new tokens.
+     * adminMintableTokensPerSecond Amount of tokens that can be minted by an admin per second.
+     * adminMintHardCap Maximum amount of tokens that can minted by an admin at once.
+     */
+    uint32 public lastTimeAdminMintedAt;
+    uint112 public adminMintableTokensPerSecond = 0.005 * 1e9;
+    uint112 public adminMintHardCap = 10_000 * 1e9;
 
-    uint32 public lastTimeMintedAt;
+    /**
+     * @notice lastTimeGameMintedAt The last time the game minted new tokens.
+     * gameMintableTokensPerSecond Amount of tokens that can be minted by the game per second.
+     * gameMintHardCap Maximum amount of tokens that can minted by the game at once.
+     */
+    uint32 public lastTimeGameMintedAt;
+    uint112 public gameMintableTokensPerSecond = 0.1 * 1e9;
+    uint112 public gameMintHardCap = 10_000 * 1e9;
 
-    constructor(Router _router, address _tokenA) ERC20WithFees("Koku", "KOKU")  {
+    constructor() ERC20WithFees("Koku", "KOKU")  {
         /**
-        @notice Creates new pair and initialize the state
-        */
-        router = _router;
-        tokenA = _tokenA;
-        tokenB = address(this);
-        pair = Factory(_router.factory()).createPair(_tokenA, address(this));
-
-        /**
-
-        @notice Gives the router max allowance over the Koku's address
-        Owner is Koku's address
-        Spender is the router address
-        */
-        _approve(address(this), address(_router), type(uint256).max);
-
-        /**
-        @notice Grants the ADMIN and MINTER roles to contract creator
-        */
+         * @notice Grants ADMIN and MINTER roles to contract creator.
+         */
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, msg.sender);
 
+        /**
+         * @notice Mints an initial 100k KOKU.
+         */
+        lastTimeAdminMintedAt = uint32(block.timestamp);
         _mint(msg.sender, 100_000 * 1e9);
-        lastTimeMintedAt = uint32(block.timestamp);
     }
 
     function decimals() public view virtual override returns (uint8) {
         return 9;
     }
 
-    function isExcludedFromFees(address account) internal view override returns (bool) {
-        return account == owner() || account == address(this);  
+    /**
+     * @notice Updates the adminMintableTokensPerSecond state variable.
+     * @param amount The admin mintable tokens per second.
+     */
+    function setAdminMintableTokensPerSecond(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        adminMintableTokensPerSecond = amount;
     }
 
-    function isPair(address account) internal view override returns (bool) {
-        return pair == account;
+    /**
+     * @notice Updates the adminMintHardCap state variable.
+     * @param amount The admin mint hard cap.
+     */
+    function setAdminMintHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        adminMintHardCap = amount;
+    }
+
+    /**
+     * @notice Updates the gameMintableTokensPerSecond state variable.
+     * @param amount The game mintable tokens per second.
+     */
+    function setGameMintableTokensPerSecond(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        gameMintableTokensPerSecond = amount;
+    }
+
+    /**
+     * @notice Updates the gameMintHardCap state variable.
+     * @param amount The game mint hard cap.
+     */
+    function setGameMintHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        gameMintHardCap = amount;
+    }
+
+    /**
+     * @notice Gives an admin the ability to mint more tokens.
+     * @param amount Amount to mint.
+     */
+    function specialMint(uint amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(block.timestamp > lastTimeAdminMintedAt, "Nothing to mint yet.");
+
+        uint mintableTokens = getMintableTokens(lastTimeAdminMintedAt, adminMintableTokensPerSecond, adminMintHardCap);
+        require(mintableTokens > 0, "Nothing to mint yet.");
+        require(mintableTokens >= amount, "amount exceeds the mintable tokens amount.");
+
+        _mint(msg.sender, amount);
+
+        lastTimeAdminMintedAt = getLastTimeMintedAt(mintableTokens, amount, adminMintableTokensPerSecond);
+    }
+
+    /**
+     * @notice Increments the inputed account's balances by minting new tokens.
+     * @param accounts Array of addresses to increment.
+     * @param values Respective mint value of every account to increment.
+     * @param valuesSum Total summation of all the values to mint.
+     */
+    function incrementBalances(address[] calldata accounts, uint[] calldata values, uint valuesSum) external onlyRole(MINTER_ROLE) {
+        require(accounts.length == values.length, "Arrays must have the same length.");
+        require(block.timestamp > lastTimeGameMintedAt, "Nothing to mint yet.");
+
+        uint mintableTokens = getMintableTokens(lastTimeGameMintedAt, gameMintableTokensPerSecond, gameMintHardCap);
+        require(mintableTokens > 0, "Nothing to mint yet.");
+        require(mintableTokens >= valuesSum, "valuesSum exceeds the mintable tokens amount.");
+
+        uint sum = 0;
+        for (uint i = 0; i < accounts.length; i++) {
+            sum += values[i];
+            require(mintableTokens >= sum, "sum exceeds the mintable tokens amount.");
+            _mint(accounts[i], values[i]);
+        }
+
+        lastTimeGameMintedAt = getLastTimeMintedAt(mintableTokens, sum, gameMintableTokensPerSecond);
+    }
+
+    /**
+     * @notice Computes the mintable tokens and taking the hardcap into account.
+     * @param lastTimeMintedAt The last time new tokens minted at.
+     * @param mintableTokensPerSecond Amount of tokens that can be minted per second.
+     * @param mintHardCap Maximum amount of tokens that can minted at once.
+     */
+    function getMintableTokens(uint32 lastTimeMintedAt, uint112 mintableTokensPerSecond, uint112 mintHardCap) internal view returns (uint) {
+        return min((block.timestamp - lastTimeMintedAt) * mintableTokensPerSecond, mintHardCap);
+    }
+
+    /**
+     * @notice Computes the last time new tokens minted at by taking the current timestamp
+     * and substracting from it the diff seconds between mintableTokens and mintedTokens.
+     * @param mintableTokens Amount of tokens that can be minted.
+     * @param mintedTokens Amount of tokens that have been be minted.
+     * @param mintableTokensPerSecond Amount of tokens that can be minted per second.
+     */
+    function getLastTimeMintedAt(uint mintableTokens, uint mintedTokens, uint112 mintableTokensPerSecond) internal view returns (uint32) {
+        return uint32(block.timestamp - (mintableTokens - mintedTokens) / mintableTokensPerSecond);
+    }
+
+    /**
+     * @dev Returns the smallest of two numbers.
+     */
+    function min(uint a, uint b) internal pure returns (uint) {
+        return a < b ? a : b;
     }
 }
