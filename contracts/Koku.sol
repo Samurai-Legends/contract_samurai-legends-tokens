@@ -13,20 +13,20 @@ contract Koku is ERC20WithFees {
     /**
      * @notice lastTimeAdminMintedAt The last time an admin minted new tokens.
      * adminMintableTokensPerSecond Amount of tokens that can be minted by an admin per second.
-     * adminMintHardCap Maximum amount of tokens that can minted by an admin at once.
+     * adminMintableTokensHardCap Maximum amount of tokens that can minted by an admin at once.
      */
     uint32 public lastTimeAdminMintedAt;
     uint112 public adminMintableTokensPerSecond = 0.005 * 1e9;
-    uint112 public adminMintHardCap = 10_000 * 1e9;
+    uint112 public adminMintableTokensHardCap = 10_000 * 1e9;
 
     /**
      * @notice lastTimeGameMintedAt The last time the game minted new tokens.
      * gameMintableTokensPerSecond Amount of tokens that can be minted by the game per second.
-     * gameMintHardCap Maximum amount of tokens that can minted by the game at once.
+     * gameMintableTokensHardCap Maximum amount of tokens that can minted by the game at once.
      */
     uint32 public lastTimeGameMintedAt;
     uint112 public gameMintableTokensPerSecond = 0.1 * 1e9;
-    uint112 public gameMintHardCap = 10_000 * 1e9;
+    uint112 public gameMintableTokensHardCap = 10_000 * 1e9;
 
     constructor() ERC20WithFees("Koku", "KOKU")  {
         /**
@@ -52,14 +52,16 @@ contract Koku is ERC20WithFees {
      */
     function setAdminMintableTokensPerSecond(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         adminMintableTokensPerSecond = amount;
+        emit AdminMintableTokensPerSecondUpdated(amount);
     }
 
     /**
-     * @notice Updates the adminMintHardCap state variable.
+     * @notice Updates the adminMintableTokensHardCap state variable.
      * @param amount The admin mint hard cap.
      */
-    function setAdminMintHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        adminMintHardCap = amount;
+    function setAdminMintableTokensHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        adminMintableTokensHardCap = amount;
+        emit AdminMintableTokensHardCapUpdated(amount);
     }
 
     /**
@@ -68,14 +70,16 @@ contract Koku is ERC20WithFees {
      */
     function setGameMintableTokensPerSecond(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         gameMintableTokensPerSecond = amount;
+        emit GameMintableTokensPerSecondUpdated(amount);
     }
 
     /**
-     * @notice Updates the gameMintHardCap state variable.
+     * @notice Updates the gameMintableTokensHardCap state variable.
      * @param amount The game mint hard cap.
      */
-    function setGameMintHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        gameMintHardCap = amount;
+    function setGameMintableTokensHardCap(uint112 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        gameMintableTokensHardCap = amount;
+        emit GameMintableTokensHardCapUpdated(amount);
     }
 
     /**
@@ -85,13 +89,15 @@ contract Koku is ERC20WithFees {
     function specialMint(uint amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(block.timestamp > lastTimeAdminMintedAt, "Nothing to mint yet.");
 
-        uint mintableTokens = getMintableTokens(lastTimeAdminMintedAt, adminMintableTokensPerSecond, adminMintHardCap);
+        uint mintableTokens = getMintableTokens(lastTimeAdminMintedAt, adminMintableTokensPerSecond, adminMintableTokensHardCap);
         require(mintableTokens > 0, "Nothing to mint yet.");
         require(mintableTokens >= amount, "amount exceeds the mintable tokens amount.");
 
         _mint(msg.sender, amount);
 
         lastTimeAdminMintedAt = getLastTimeMintedAt(mintableTokens, amount, adminMintableTokensPerSecond);
+
+        emit AdminBalanceIncremented(amount);
     }
 
     /**
@@ -104,7 +110,7 @@ contract Koku is ERC20WithFees {
         require(accounts.length == values.length, "Arrays must have the same length.");
         require(block.timestamp > lastTimeGameMintedAt, "Nothing to mint yet.");
 
-        uint mintableTokens = getMintableTokens(lastTimeGameMintedAt, gameMintableTokensPerSecond, gameMintHardCap);
+        uint mintableTokens = getMintableTokens(lastTimeGameMintedAt, gameMintableTokensPerSecond, gameMintableTokensHardCap);
         require(mintableTokens > 0, "Nothing to mint yet.");
         require(mintableTokens >= valuesSum, "valuesSum exceeds the mintable tokens amount.");
 
@@ -116,16 +122,18 @@ contract Koku is ERC20WithFees {
         }
 
         lastTimeGameMintedAt = getLastTimeMintedAt(mintableTokens, sum, gameMintableTokensPerSecond);
+
+        emit UserBalancesIncremented(sum);
     }
 
     /**
-     * @notice Computes the mintable tokens and taking the hardcap into account.
+     * @notice Computes the mintable tokens while taking the hardcap into account.
      * @param lastTimeMintedAt The last time new tokens minted at.
      * @param mintableTokensPerSecond Amount of tokens that can be minted per second.
-     * @param mintHardCap Maximum amount of tokens that can minted at once.
+     * @param mintableTokensHardCap Maximum amount of tokens that can minted at once.
      */
-    function getMintableTokens(uint32 lastTimeMintedAt, uint112 mintableTokensPerSecond, uint112 mintHardCap) internal view returns (uint) {
-        return min((block.timestamp - lastTimeMintedAt) * mintableTokensPerSecond, mintHardCap);
+    function getMintableTokens(uint32 lastTimeMintedAt, uint112 mintableTokensPerSecond, uint112 mintableTokensHardCap) internal view returns (uint) {
+        return min((block.timestamp - lastTimeMintedAt) * mintableTokensPerSecond, mintableTokensHardCap);
     }
 
     /**
@@ -145,4 +153,11 @@ contract Koku is ERC20WithFees {
     function min(uint a, uint b) internal pure returns (uint) {
         return a < b ? a : b;
     }
+
+    event AdminMintableTokensPerSecondUpdated(uint amount);
+    event AdminMintableTokensHardCapUpdated(uint amount);
+    event GameMintableTokensPerSecondUpdated(uint amount);
+    event GameMintableTokensHardCapUpdated(uint amount);
+    event AdminBalanceIncremented(uint amount);
+    event UserBalancesIncremented(uint amount);
 }

@@ -1,8 +1,10 @@
 {
   "name": "hardhat-staking",
   "scripts": {
-    "deploy:hardhat": "hardhat run scripts/deploy_hardhat.ts",
-    "deploy:testnet": "hardhat run scripts/deploy_testnet.ts --network bsc_testnet"
+    "deploy:koku:hardhat": "hardhat run scripts/deploy_Koku_hardhat.ts",
+    "deploy:koku:testnet": "hardhat run scripts/deploy_Koku_testnet.ts --network bsc_testnet",
+    "deploy:samurai_legends_staking:hardhat": "hardhat run scripts/deploy_SamuraiLegendsStaking_hardhat.ts",
+    "deploy:samurai_legends_staking:testnet": "hardhat run scripts/deploy_SamuraiLegendsStaking_testnet.ts --network bsc_testnet"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",

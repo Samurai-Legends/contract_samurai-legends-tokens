@@ -23,6 +23,10 @@ npx prettier '**/*.{json,sol,md}' --check
 npx prettier '**/*.{json,sol,md}' --write
 npx solhint 'contracts/**/*.sol'
 npx solhint 'contracts/**/*.sol' --fix
+yarn deploy:koku:hardhat
+yarn deploy:samurai_legends_staking:hardhat
+yarn deploy:koku:testnet
+yarn deploy:samurai_legends_staking:testnet
 ```
 
 # Etherscan verification

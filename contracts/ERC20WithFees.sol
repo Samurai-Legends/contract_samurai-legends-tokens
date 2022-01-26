@@ -51,7 +51,7 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
 
     Fee public fee = Fee(0, 1000);
 
-    mapping(address => bool) isPair;
+    mapping(address => bool) public isPair;
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -402,6 +402,11 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
      */
     function setPair(address pair, bool value) external onlyRole(DEFAULT_ADMIN_ROLE) {
         isPair[pair] = value;
+        if (value) {
+            emit PairAdded(pair);
+        } else {
+            emit PairRemoved(pair);
+        }
     }
 
     /**
@@ -414,4 +419,6 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
     }
 
     event FeeUpdated(uint numerator, uint denominator);
+    event PairAdded(address account);
+    event PairRemoved(address account);
 }
