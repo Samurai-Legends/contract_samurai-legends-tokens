@@ -149,7 +149,8 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
      * @param index Unlock index to withdraw from.
      */
     function withdraw(uint index) external launchState(true) {
-        Unlock storage userUnlock = unlocks[msg.sender][index];
+        uint id = ids[msg.sender][index];
+        Unlock storage userUnlock = unlocks[msg.sender][id];
 
         (uint passedPeriod, uint claimableAmount) = getClaimableAmount(userUnlock);
 
@@ -158,7 +159,7 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
          */
         if (passedPeriod == vestingPeriod) {
             ids[msg.sender].remove(index);
-            delete unlocks[msg.sender][index];
+            delete unlocks[msg.sender][id];
 
             emit UnlockFinished(msg.sender, claimableAmount, block.timestamp);
         } 
