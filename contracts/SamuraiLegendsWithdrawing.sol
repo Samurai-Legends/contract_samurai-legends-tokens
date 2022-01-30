@@ -182,6 +182,7 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
      */
     function launch() external onlyOwner {
         launched = true;
+        
         emit Launched(block.timestamp);
     }
 
