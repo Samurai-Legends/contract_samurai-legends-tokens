@@ -137,7 +137,7 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
      * @notice Computes the passed period and claimable amount of a user unlock object.
      * @param userUnlock User unlock object to get metadata from.
      */
-    function getClaimableAmount(Unlock storage userUnlock) internal view returns (uint, uint) {
+    function getClaimableAmount(Unlock memory userUnlock) public view returns (uint, uint) {
         uint passedPeriod = min(block.timestamp - userUnlock.createdAt, vestingPeriod);
         uint claimableAmount = (passedPeriod * userUnlock.fullAmount) / vestingPeriod - userUnlock.claimedAmount;
 
