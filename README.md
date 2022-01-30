@@ -1,3 +1,21 @@
+# Overview
+
+Token and staking contracts for Samurai Legends.
+
+# Contracts
+
+## SamuraiLegends.sol
+
+Base token for Samurai Legends.
+
+## Koku.sol
+
+Reward token for Samurai Legends ecosystem. Time-based mint limits.
+
+## SamuraiLegendsStaking.sol
+
+Staking contract for auto-compounding rewards. With time-delay withdrawal.
+
 # Advanced Sample Hardhat Project
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
