@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Generatable.sol";
 import "./Recoverable.sol";
-import "./Onceable.sol";
 import "./Array.sol";
 
 
@@ -32,7 +31,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
     IMigration immutable private migration;
 
     mapping(address => uint) public userUnlockBalance;
-    mapping(address => uint[]) public ids;
+    mapping(address => uint[]) private _userUnlockIds;
     mapping(address => mapping(uint => Unlock)) public unlocks;
 
     int112 private _toDeposit;
@@ -81,6 +80,15 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
     }
 
     /**
+     * @notice Returns user unlock ids array.
+     * @param sender User address to get the ids from.
+     * @return userUnlockIds Array of user unlock ids.
+     */
+    function userUnlockIds(address sender) public view returns (uint[] memory) {
+        return _userUnlockIds[sender];
+    }
+
+    /**
      * @notice Creates a new unlock from current rsunBalances and infBalances of a user.
      * The user will get 10% and 90% linearly vested for 30 days for every new unlock.
      */
@@ -98,7 +106,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
         });
 
         uint id = unique();
-        ids[msg.sender].push(id);
+        _userUnlockIds[msg.sender].push(id);
         unlocks[msg.sender][id] = userUnlock;
 
         /**
@@ -133,7 +141,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
      * @param index Unlock index to withdraw from.
      */
     function claim(uint index) external {
-        uint id = ids[msg.sender][index];
+        uint id = _userUnlockIds[msg.sender][index];
         Unlock storage userUnlock = unlocks[msg.sender][id];
 
         (uint passedPeriod, uint claimableAmount) = getClaimableAmount(userUnlock);
@@ -142,7 +150,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
          * @notice Does a full withdraw since vesting period already finished.
          */
         if (passedPeriod == vestingPeriod) {
-            ids[msg.sender].remove(index);
+            _userUnlockIds[msg.sender].remove(index);
             delete unlocks[msg.sender][id];
 
             emit UnlockFinished(msg.sender, claimableAmount, block.timestamp);
