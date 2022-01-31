@@ -11,6 +11,7 @@ struct Unlock {
     uint32 createdAt;
     uint112 vestedAmount;
     uint112 claimedAmount;
+    uint fullAmount;
 }
 
 interface IMigration {
@@ -102,7 +103,8 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
         Unlock memory userUnlock = Unlock({
             createdAt: uint32(block.timestamp),
             vestedAmount: uint112(vestedAmount),
-            claimedAmount: 0
+            claimedAmount: 0,
+            fullAmount: amount
         });
 
         uint id = unique();
