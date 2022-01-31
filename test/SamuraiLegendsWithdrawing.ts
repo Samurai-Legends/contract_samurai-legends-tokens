@@ -7,7 +7,6 @@ import {
   Migration,
   SamuraiLegends,
   SamuraiLegendsWithdrawing,
-  TokenCreator,
   // eslint-disable-next-line node/no-missing-import
 } from '../typechain'
 
@@ -27,10 +26,6 @@ const toFuture = async (value: string) => {
 
 describe('SamuraiLegendsWithdrawing', function () {
   let smg: SamuraiLegends
-  let rsun: TokenCreator
-  let inf: TokenCreator
-  let apeLP: TokenCreator
-  let wbnb: TokenCreator
   let migration: Migration
   let withdrawing: SamuraiLegendsWithdrawing
   let owner: SignerWithAddress
@@ -43,27 +38,8 @@ describe('SamuraiLegendsWithdrawing', function () {
     smg = await SamuraiLegends.deploy()
     await smg.deployed()
 
-    const TokenCreator = await ethers.getContractFactory('TokenCreator')
-
-    rsun = await TokenCreator.deploy('RisingSun', 'RSUN', amount(10_000_000_000))
-    await rsun.deployed()
-
-    inf = await TokenCreator.deploy('Influence', 'INF', amount(5_000_000))
-    await inf.deployed()
-
-    apeLP = await TokenCreator.deploy('ApeLp', 'ApeLP', amount(100_000_000))
-    await apeLP.deployed()
-
-    wbnb = await TokenCreator.deploy('Wrapped BNB', 'WBNB', amount(5_000_000, 18))
-    await wbnb.deployed()
-
     const Migration = await ethers.getContractFactory('Migration')
-    migration = await Migration.deploy(
-      rsun.address,
-      inf.address,
-      apeLP.address,
-      wbnb.address,
-    )
+    migration = await Migration.deploy()
     await migration.deployed()
 
     const SamuraiLegendsWithdrawing = await ethers.getContractFactory(
