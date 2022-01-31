@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Generatable.sol";
 import "./Recoverable.sol";
 import "./Onceable.sol";
@@ -26,7 +25,7 @@ interface IMigration {
  * @title Contract that adds SMG withdrawing functionalities.
  * @author Leo
  */
-contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable {
+contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
     using Array for uint[];
 
     IERC20 immutable private smg;
