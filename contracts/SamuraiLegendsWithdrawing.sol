@@ -11,7 +11,7 @@ import "./Array.sol";
 
 struct Unlock {
     uint32 createdAt;
-    uint112 fullAmount;
+    uint112 vestedAmount;
     uint112 claimedAmount;
 }
 
@@ -26,7 +26,7 @@ interface IMigration {
  * @title Contract that adds SMG withdrawing functionalities.
  * @author Leo
  */
-contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceable {
+contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable {
     using Array for uint[];
 
     IERC20 immutable private smg;
@@ -36,10 +36,9 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
     mapping(address => uint[]) public ids;
     mapping(address => mapping(uint => Unlock)) public unlocks;
 
-    uint104 public totalUnlockBalance;
-    uint104 public totalUnlockBalancePostLaunch;
-    uint40 public vestingPeriod = 30 days;
-    bool public launched = false;
+    int112 private _toDeposit;
+    uint112 public totalUnlockBalance;
+    uint32 public vestingPeriod = 30 days;
 
     constructor(IERC20 _smg, IMigration _migration) {
         smg = _smg;
@@ -48,19 +47,16 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
 
     /**
      * @notice Computes SMG tokens to be deposited by an Admin.
+     * @return toDeposit Amount of SMG tokens to be deposited by an Admin.
      */
-    function toDeposit() external view returns (uint) {
-        if (launched) {
-            int diff = int104(totalUnlockBalancePostLaunch) - int(smg.balanceOf(address(this)));
-            return uint(max(diff, 0));
-        }
-
-        return (getSMG(migration.rsunDepositedTotal(), migration.infDepositedTotal()) * 10) / 100; // 10%
+    function toDeposit() external view returns (int) {
+        return int((getSMG(migration.rsunDepositedTotal(), migration.infDepositedTotal()) * 10) / 100) + _toDeposit - int(smg.balanceOf(address(this)));
     }
 
     /**
      * @notice Computes SMG balance from the migrated RSUN of a user.
      * Current ratio is: 1 SMG = 100 RSUN.
+     * @return smgAmount Amount of SMG computed from RSUN.
      */
     function getSMGFromRSUN(uint amount) internal pure returns (uint) {
         return (amount * 10) / 1000;
@@ -69,6 +65,7 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
     /**
      * @notice Computes SMG balance from the migrated INF of a user.
      * Current ratio is: 1 SMG = 12.5 INF.
+     * @return smgAmount Amount of SMG computed from INF.
      */
     function getSMGFromINF(uint amount) internal pure returns (uint) {
         return (amount * 10) / 125;
@@ -78,6 +75,7 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
      * @notice Computes the sum of SMG from rsun and inf amounts.
      * @param rsunAmount Amount of RSUN to convert to SMG.
      * @param infAmount Amount of INF to convert to SMG.
+     * @return smgAmount Amount of SMG computed from RSUN and INF.
      */
     function getSMG(uint rsunAmount, uint infAmount) internal pure returns (uint) {
         return getSMGFromRSUN(rsunAmount) + getSMGFromINF(infAmount);
@@ -85,15 +83,18 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
 
     /**
      * @notice Creates a new unlock from current rsunBalances and infBalances of a user.
-     * The unlock function will only be active after launch.
+     * The user will get 10% and 90% linearly vested for 30 days for every new unlock.
      */
-    function unlock() external launchState(true) {
+    function unlock() external {
         uint112 amount = uint112(getSMG(migration.rsunBalances(msg.sender), migration.infBalances(msg.sender)) - userUnlockBalance[msg.sender]);
         require(amount != 0, "No amount to unlock.");
 
+        uint claimableAmount = (amount * 10) / 100;
+        uint vestedAmount = amount - claimableAmount;
+
         Unlock memory userUnlock = Unlock({
             createdAt: uint32(block.timestamp),
-            fullAmount: amount,
+            vestedAmount: uint112(vestedAmount),
             claimedAmount: 0
         });
 
@@ -104,51 +105,35 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
         /**
          * @notice Updates user and total unlock balances trackers.
          */
-        userUnlockBalance[msg.sender] += userUnlock.fullAmount;
-        totalUnlockBalance += uint104(userUnlock.fullAmount);
-        totalUnlockBalancePostLaunch += uint104(userUnlock.fullAmount);
-        
-        emit UnlockCreated(msg.sender, userUnlock.fullAmount, userUnlock.createdAt);
-    }
-
-    /**
-     * @notice Lets a user withdraw 10% of current holdings with no linear vesting.
-     * It will only be active before launch.
-     * It will only be able to be called once per user.
-     */
-    function beforeLaunchWithdraw() external launchState(false) onlyOnce {
-        uint fullAmount = getSMG(migration.rsunBalances(msg.sender), migration.infBalances(msg.sender));
-        require(fullAmount != 0, "No amount to withdraw.");
-
-        uint amount = (fullAmount * 10) / 100; // 10%
-        
-        /**
-         * @notice Updates user and total unlock balances trackers.
-         */
         userUnlockBalance[msg.sender] += amount;
         totalUnlockBalance += uint104(amount);
 
-        require(smg.transfer(msg.sender, amount), "Transfer failed.");
+        _toDeposit -= int112(uint112(claimableAmount));
+        _toDeposit += int112(uint112(vestedAmount));
 
-        emit Withdrawn(msg.sender, amount);
+        require(smg.transfer(msg.sender, claimableAmount), "Transfer failed.");
+        
+        emit UnlockCreated(msg.sender, amount, block.timestamp);
     }
 
     /**
      * @notice Computes the passed period and claimable amount of a user unlock object.
      * @param userUnlock User unlock object to get metadata from.
+     * @return passedPeriod Passed vesting period of an unlock object.
+     * @return claimableAmount Claimable amount of an unlock object.
      */
     function getClaimableAmount(Unlock memory userUnlock) public view returns (uint, uint) {
         uint passedPeriod = min(block.timestamp - userUnlock.createdAt, vestingPeriod);
-        uint claimableAmount = (passedPeriod * userUnlock.fullAmount) / vestingPeriod - userUnlock.claimedAmount;
+        uint claimableAmount = (passedPeriod * userUnlock.vestedAmount) / vestingPeriod - userUnlock.claimedAmount;
 
         return (passedPeriod, claimableAmount);
     }
 
     /**
-     * @notice Lets a user withdraw an amount according to the linear vesting.
+     * @notice Lets a user claim an amount according to the linear vesting.
      * @param index Unlock index to withdraw from.
      */
-    function withdraw(uint index) external launchState(true) {
+    function claim(uint index) external {
         uint id = ids[msg.sender][index];
         Unlock storage userUnlock = unlocks[msg.sender][id];
 
@@ -172,25 +157,11 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
             emit UnlockUpdated(msg.sender, claimableAmount, block.timestamp);
         }
 
+        _toDeposit -= int112(uint112(claimableAmount));
+
         require(smg.transfer(msg.sender, claimableAmount), "Transfer failed.");
 
-        emit Withdrawn(msg.sender, claimableAmount);
-    }
-
-    /**
-     * @notice Gives the owner the ability to set the launch state to true.
-     */
-    function launch() external onlyOwner {
-        launched = true;
-        
-        emit Launched(block.timestamp);
-    }
-
-    /**
-     * @dev Returns the largest of two signed numbers.
-     */
-    function max(int a, int b) internal pure returns (int) {
-        return a > b ? a : b;
+        emit Claimed(msg.sender, claimableAmount);
     }
 
     /**
@@ -200,18 +171,8 @@ contract SamuraiLegendsWithdrawing is Ownable, Generatable, Recoverable, Onceabl
         return a < b ? a : b;
     }
 
-    /**
-     * @notice Compares the launch state with an expected value.
-     * @param expected Expected launch state
-     */
-    modifier launchState(bool expected) {
-        require(launched == expected, "Launched state isn't as expected!");
-        _;
-    }
-
-    event Launched(uint launchedAt);
     event UnlockCreated(address indexed sender, uint fullAmount, uint createdAt);
     event UnlockUpdated(address indexed sender, uint claimedAmount, uint updatedAt);
     event UnlockFinished(address indexed sender, uint claimedAmount, uint finishedAt);
-    event Withdrawn(address indexed sender, uint amount);
+    event Claimed(address indexed sender, uint amount);
 }
