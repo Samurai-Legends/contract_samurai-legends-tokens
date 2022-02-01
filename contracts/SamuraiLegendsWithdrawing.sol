@@ -91,13 +91,14 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
 
     /**
      * @notice Returns user unlock by index.
+     * @param sender User address to get the unlock object from.
      * @param index User unlock index.
      * @return userUnlock User unlock object.
      */
-    function unlocks(uint index) public view returns (Unlock memory) {
-        uint id = _userUnlockIds[msg.sender][index];
+    function unlocks(address sender, uint index) public view returns (Unlock memory) {
+        uint id = _userUnlockIds[sender][index];
 
-        return _unlocks[msg.sender][id];
+        return _unlocks[sender][id];
     }
 
     /**
