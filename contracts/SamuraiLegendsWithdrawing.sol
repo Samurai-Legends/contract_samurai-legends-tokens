@@ -139,11 +139,14 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
 
     /**
      * @notice Computes the passed period and claimable amount of a user unlock object.
-     * @param userUnlock User unlock object to get metadata from.
+    * @param sender User address to get claimable amount info from.
+     * @param index User unlock index.
      * @return passedPeriod Passed vesting period of an unlock object.
      * @return claimableAmount Claimable amount of an unlock object.
      */
-    function getClaimableAmount(Unlock memory userUnlock) public view returns (uint, uint) {
+    function getClaimableAmount(address sender, uint index) public view returns (uint, uint) {
+        uint id = _userUnlockIds[sender][index];
+        Unlock storage userUnlock = _unlocks[sender][id];
         uint passedPeriod = min(block.timestamp - userUnlock.createdAt, vestingPeriod);
         uint claimableAmount = (passedPeriod * userUnlock.vestedAmount) / vestingPeriod - userUnlock.claimedAmount;
 
@@ -158,7 +161,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
         uint id = _userUnlockIds[msg.sender][index];
         Unlock storage userUnlock = _unlocks[msg.sender][id];
 
-        (uint passedPeriod, uint claimableAmount) = getClaimableAmount(userUnlock);
+        (uint passedPeriod, uint claimableAmount) = getClaimableAmount(msg.sender, index);
 
         /**
          * @notice Does a full withdraw since vesting period already finished.
