@@ -33,7 +33,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
 
     mapping(address => uint) public userUnlockBalance;
     mapping(address => uint[]) private _userUnlockIds;
-    mapping(address => mapping(uint => Unlock)) public unlocks;
+    mapping(address => mapping(uint => Unlock)) private _unlocks;
 
     int112 private _toDeposit;
     uint112 public totalUnlockBalance;
@@ -90,11 +90,22 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
     }
 
     /**
+     * @notice Returns user unlock by index.
+     * @param index User unlock index.
+     * @return userUnlock User unlock object.
+     */
+    function unlocks(uint index) public view returns (Unlock memory) {
+        uint id = _userUnlockIds[msg.sender][index];
+
+        return _unlocks[msg.sender][id];
+    }
+
+    /**
      * @notice Creates a new unlock from current rsunBalances and infBalances of a user.
      * The user will get 10% and 90% linearly vested for 30 days for every new unlock.
      */
     function unlock() external {
-        uint112 amount = uint112(getSMG(migration.rsunBalances(msg.sender), migration.infBalances(msg.sender)) - userUnlockBalance[msg.sender]);
+        uint amount = getSMG(migration.rsunBalances(msg.sender), migration.infBalances(msg.sender)) - userUnlockBalance[msg.sender];
         require(amount != 0, "No amount to unlock.");
 
         uint claimableAmount = (amount * 10) / 100;
@@ -109,7 +120,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
 
         uint id = unique();
         _userUnlockIds[msg.sender].push(id);
-        unlocks[msg.sender][id] = userUnlock;
+        _unlocks[msg.sender][id] = userUnlock;
 
         /**
          * @notice Updates user and total unlock balances trackers.
@@ -144,7 +155,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
      */
     function claim(uint index) external {
         uint id = _userUnlockIds[msg.sender][index];
-        Unlock storage userUnlock = unlocks[msg.sender][id];
+        Unlock storage userUnlock = _unlocks[msg.sender][id];
 
         (uint passedPeriod, uint claimableAmount) = getClaimableAmount(userUnlock);
 
@@ -153,7 +164,7 @@ contract SamuraiLegendsWithdrawing is Generatable, Recoverable {
          */
         if (passedPeriod == vestingPeriod) {
             _userUnlockIds[msg.sender].remove(index);
-            delete unlocks[msg.sender][id];
+            delete _unlocks[msg.sender][id];
 
             emit UnlockFinished(msg.sender, claimableAmount, block.timestamp);
         } 
