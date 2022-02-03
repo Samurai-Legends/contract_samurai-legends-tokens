@@ -87,10 +87,9 @@ contract Koku is ERC20WithFees {
      * @param amount Amount to mint.
      */
     function specialMint(uint amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(block.timestamp > lastTimeAdminMintedAt, "Nothing to mint yet.");
+        require(amount > 0, "Invalid input amount.");
 
         uint mintableTokens = getMintableTokens(lastTimeAdminMintedAt, adminMintableTokensPerSecond, adminMintableTokensHardCap);
-        require(mintableTokens > 0, "Nothing to mint yet.");
         require(mintableTokens >= amount, "amount exceeds the mintable tokens amount.");
 
         _mint(msg.sender, amount);
@@ -108,10 +107,9 @@ contract Koku is ERC20WithFees {
      */
     function incrementBalances(address[] calldata accounts, uint[] calldata values, uint valuesSum) external onlyRole(MINTER_ROLE) {
         require(accounts.length == values.length, "Arrays must have the same length.");
-        require(block.timestamp > lastTimeGameMintedAt, "Nothing to mint yet.");
+        require(valuesSum > 0, "Invalid valuesSum amount.");
 
         uint mintableTokens = getMintableTokens(lastTimeGameMintedAt, gameMintableTokensPerSecond, gameMintableTokensHardCap);
-        require(mintableTokens > 0, "Nothing to mint yet.");
         require(mintableTokens >= valuesSum, "valuesSum exceeds the mintable tokens amount.");
 
         uint sum = 0;

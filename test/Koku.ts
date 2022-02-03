@@ -116,7 +116,8 @@ describe('Koku', function () {
     expect(fee.denominator).to.equal(1000)
 
     // Update fees
-    await expect(koku.setFee(100, 1000)) // 10%
+    await expect(koku.setFee(100, 0)).to.be.revertedWith('Denominator must not equal 0.') // 10%
+    await expect(koku.setFee(100, 1000)).to.emit(koku, 'FeeUpdated') // 10%
     fee = await koku.fee()
     expect(fee.numerator).to.equal(100)
     expect(fee.denominator).to.equal(1000)
@@ -263,6 +264,9 @@ describe('Koku', function () {
 
   it('Should let owner recover taxing balance', async function () {
     const oldBalances = await balances(koku, owner.address, koku.address)
+    await expect(
+      koku.recoverERC20(koku.address, oldBalances[1].mul(2)),
+    ).to.be.revertedWith('Invalid input amount.')
     await expect(koku.recoverERC20(koku.address, oldBalances[1])).to.emit(
       koku,
       'Transfer',
@@ -304,6 +308,9 @@ describe('Koku', function () {
     await expect(koku.connect(users[0]).specialMint(hardcap)).to.be.revertedWith(
       `AccessControl: account ${users[0].address.toLowerCase()} is missing role ${DEFAULT_ADMIN_ROLE}`,
     )
+
+    // Shouldn't let the owner make an empty special mint
+    await expect(koku.specialMint(0)).to.be.revertedWith('Invalid input amount.')
 
     // Should let the owner make a special mint
     await expect(koku.specialMint(hardcap)).to.emit(koku, 'AdminBalanceIncremented')
@@ -411,6 +418,24 @@ describe('Koku', function () {
       ),
     ).to.be.revertedWith('sum exceeds the mintable tokens amount.')
 
+    // Should revert since accounts and values don't have the same lenght
+    await expect(
+      koku.connect(game).incrementBalances(
+        users.slice(0, 2).map((e) => e.address),
+        [hardcap.mul(50).div(100), hardcap.mul(30).div(100), hardcap.mul(20).div(100)],
+        hardcap,
+      ),
+    ).to.be.revertedWith('Arrays must have the same length.')
+
+    // Should revert since accounts and values don't have the same lenght
+    await expect(
+      koku.connect(game).incrementBalances(
+        users.slice(0, 3).map((e) => e.address),
+        [hardcap.mul(50).div(100), hardcap.mul(30).div(100), hardcap.mul(20).div(100)],
+        0,
+      ),
+    ).to.be.revertedWith('Invalid valuesSum amount.')
+
     // Should let the game increment balances
     await expect(
       koku.connect(game).incrementBalances(
@@ -516,5 +541,9 @@ describe('Koku', function () {
         mintableTokens,
       ),
     ).to.emit(koku, 'UserBalancesIncremented')
+  })
+
+  it('Should verify decimals to be 9', async function () {
+    expect(await koku.decimals()).to.equal(9)
   })
 })

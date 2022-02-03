@@ -364,8 +364,6 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
             uint percentage = (n * 1e9) / pendingAmount.pendingPeriod.repeat;
             amount = (pendingAmount.fullAmount * percentage) / 1e9 - pendingAmount.claimedAmount;
         }
-
-        require(amount != 0, "Claim is still pending.");
         
         // effects
         /**
@@ -453,7 +451,6 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         } else  {
             // checks
             uint remainingReward = rewardRate * (rewardFinishedAt - block.timestamp);
-            require(remainingReward > 0, "No remaining rewards.");
 
             // effects
             rewardRate = 0;

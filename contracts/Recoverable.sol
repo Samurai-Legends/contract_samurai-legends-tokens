@@ -12,15 +12,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 */
 contract Recoverable is Ownable {
     /**
-    @notice Recovers stucked BNB in the contract
-    */
-    function recoverBNB(uint amount) external onlyOwner {
-        require(address(this).balance >= amount, "Invalid input amount.");
-        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
-        require(success, "Recover failed.");
-    }
-
-    /**
     @notice Recovers stucked ERC20 token in the contract
     @param token An ERC20 token address
     */

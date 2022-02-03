@@ -65,14 +65,24 @@ describe('SamuraiLegendsStaking', function () {
   })
 
   it('Should make the owner add 5m smg as a staking reward', async function () {
-    await staking.addReward(amount(5_000_000))
+    await expect(staking.addReward(amount(50_000_000))).to.be.revertedWith(
+      'ERC20: transfer amount exceeds allowance',
+    )
+    await expect(staking.addReward(amount(0))).to.be.revertedWith('Invalid input amount.')
+
+    await expect(staking.addReward(amount(4_000_000))).to.emit(staking, 'RewardAdded')
+    await toFuture('1 second')
+    await expect(staking.addReward(amount(1_000_000))).to.emit(staking, 'RewardAdded')
     expect(await smg.balanceOf(staking.address)).to.equal(amount(5_000_000))
   })
 
   it('Should verify reward rate', async function () {
     const rewardRate = await staking.rewardRate()
     const rewardDuration = await staking.rewardDuration()
-    expect(rewardRate).to.equal(amount(5_000_000).div(rewardDuration))
+    expect(rewardRate).to.be.closeTo(
+      amount(5_000_000).div(rewardDuration),
+      amount(3).toNumber(),
+    )
   })
 
   it('Should verify total duration reward', async function () {
@@ -93,7 +103,16 @@ describe('SamuraiLegendsStaking', function () {
       amount(20_000),
     )
 
-    await staking.connect(users[0]).stake(amount(20_000))
+    await expect(staking.connect(users[0]).stake(amount(0))).to.be.revertedWith(
+      'Invalid input amount.',
+    )
+    await expect(staking.connect(users[0]).stake(amount(5_000_000))).to.be.revertedWith(
+      'ERC20: transfer amount exceeds balance',
+    )
+    await expect(staking.connect(users[0]).stake(amount(20_000))).to.emit(
+      staking,
+      'Staked',
+    )
 
     expect(await smg.balanceOf(users[0].address)).to.equal(amount(80_000))
     expect(await staking.userStake(users[0].address)).to.equal(amount(20_000))
@@ -106,17 +125,24 @@ describe('SamuraiLegendsStaking', function () {
     const userStake = await staking.userStake(users[0].address)
     const totalStake = await staking.totalStake()
 
+    await expect(staking.connect(users[0]).withdraw(amount(0))).to.be.revertedWith(
+      'Invalid input amount.',
+    )
+    await expect(
+      staking.connect(users[0]).withdraw(amount(5_000_000)),
+    ).to.be.revertedWith('Invalid input amount.')
     await expect(staking.connect(users[0]).withdraw(amount(10_000))).to.emit(
       staking,
       'PendingCreated',
     )
+
     expect(await staking.userStake(users[0].address)).to.be.closeTo(
       userStake.sub(amount(10_000)),
-      amount(1).toNumber(),
+      amount(3).toNumber(),
     )
     expect(await staking.totalStake()).to.be.closeTo(
       totalStake.sub(amount(10_000)),
-      amount(1).toNumber(),
+      amount(3).toNumber(),
     )
   })
 
@@ -128,7 +154,9 @@ describe('SamuraiLegendsStaking', function () {
   })
 
   it('Should not let user claim unfinished pending', async function () {
-    await expect(staking.connect(users[0]).claim(0)).to.be.reverted
+    await expect(staking.connect(users[0]).claim(0)).to.be.revertedWith(
+      'Claim is still pending.',
+    )
   })
 
   it('Should let user claim 25% finished pendings', async function () {
@@ -166,6 +194,12 @@ describe('SamuraiLegendsStaking', function () {
 
   it('Should let owner decrease 2.5m staking rewards', async function () {
     const rewardRate = await staking.rewardRate()
+    await expect(staking.decreaseReward(amount(0))).to.be.revertedWith(
+      'Invalid input amount.',
+    )
+    await expect(staking.decreaseReward(amount(5_000_000))).to.be.revertedWith(
+      'Invalid input amount.',
+    )
     await expect(staking.decreaseReward(amount(2_500_000))).to.emit(
       staking,
       'RewardDecreased',
@@ -183,6 +217,13 @@ describe('SamuraiLegendsStaking', function () {
       staking,
       'PendingCreated',
     )
+    await expect(staking.connect(users[0]).withdrawAll()).to.be.revertedWith(
+      'User has no active stake.',
+    )
+    await expect(staking.connect(users[0]).withdraw(amount(10_000))).to.be.revertedWith(
+      'User has no active stake.',
+    )
+
     expect(await staking.userStake(users[0].address)).to.be.equal(0)
     expect(await staking.totalStake()).to.be.equal(0)
     expect(await staking.userPendingIds(users[0].address)).to.have.a.lengthOf(1)
@@ -199,7 +240,7 @@ describe('SamuraiLegendsStaking', function () {
     expect(await staking.userPendingIds(users[0].address)).to.have.a.lengthOf(0)
     expect(await smg.balanceOf(users[0].address)).to.be.closeTo(
       amount(2_500_000 + 100_000),
-      amount(2).toNumber(),
+      amount(4).toNumber(),
     )
   })
 
@@ -228,6 +269,10 @@ describe('SamuraiLegendsStaking', function () {
 
     await expect(staking.addReward(amount(5_000))).to.emit(staking, 'RewardAdded')
 
+    await expect(staking.updateRewardDuration(s('4 weeks'))).to.be.revertedWith(
+      'Reward duration must be finalized.',
+    )
+
     await smg.connect(users[0]).approve(staking.address, amount(1_000))
     await expect(staking.connect(users[0]).stake(amount(1_000))).to.emit(
       staking,
@@ -244,6 +289,9 @@ describe('SamuraiLegendsStaking', function () {
     )
 
     await expect(staking.connect(users[0]).withdrawAll()).to.emit(staking, 'Withdrawn')
+    await expect(staking.connect(users[0]).withdrawAll()).to.be.revertedWith(
+      'User has no active stake.',
+    )
 
     await toFuture('12 days')
 
@@ -271,6 +319,11 @@ describe('SamuraiLegendsStaking', function () {
     await expect(staking.resetReward()).to.emit(staking, 'RewardReseted')
     expect(await staking.rewardRate()).to.equal(0)
 
+    await expect(staking.addReward(amount(10_000))).to.emit(staking, 'RewardAdded')
+    expect(await staking.rewardRate()).to.not.equal(0)
+    await expect(staking.resetReward()).to.emit(staking, 'RewardReseted')
+    expect(await staking.rewardRate()).to.equal(0)
+
     const rewardPerToken = await staking.rewardPerToken()
     await toFuture('10 weeks')
     expect(await staking.rewardPerToken()).to.equal(rewardPerToken)
@@ -291,6 +344,9 @@ describe('SamuraiLegendsStaking', function () {
     await expect(staking.connect(users[0]).withdrawAll()).to.emit(
       staking,
       'PendingCreated',
+    )
+    await expect(staking.connect(users[0]).withdrawAll()).to.be.revertedWith(
+      'User has no active stake.',
     )
 
     await toFuture('4 weeks')
@@ -318,6 +374,7 @@ describe('SamuraiLegendsStaking', function () {
   })
 
   it('Should let users with shares 40% 30% 15% 10% 5% to stake', async function () {
+    await expect(staking.setFee(0, 0)).to.be.revertedWith('Denominator must not equal 0.')
     await expect(staking.setFee(0, 1000)).to.emit(staking, 'FeeUpdated')
     await expect(staking.updateRewardDuration(s('4 weeks'))).to.emit(
       staking,
@@ -367,6 +424,9 @@ describe('SamuraiLegendsStaking', function () {
         amount(1).toNumber(),
       )
       await expect(staking.connect(user).withdrawAll()).to.emit(staking, 'Withdrawn')
+      await expect(staking.connect(user).withdrawAll()).to.be.revertedWith(
+        'User has no active stake.',
+      )
     }
 
     await toFuture('3 weeks')
@@ -390,5 +450,9 @@ describe('SamuraiLegendsStaking', function () {
     }
 
     expect(await staking.totalStake()).to.equal(0)
+
+    await expect(staking.decreaseReward(100)).to.be.revertedWith(
+      'Reward duration finished.',
+    )
   })
 })
