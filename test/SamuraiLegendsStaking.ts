@@ -66,7 +66,7 @@ describe('SamuraiLegendsStaking', function () {
 
   it('Should make the owner add 5m smg as a staking reward', async function () {
     await expect(staking.addReward(amount(50_000_000))).to.be.revertedWith(
-      'ERC20: transfer amount exceeds allowance',
+      'ERC20: insufficient allowance',
     )
     await expect(staking.addReward(amount(0))).to.be.revertedWith('Invalid input amount.')
 
@@ -107,7 +107,7 @@ describe('SamuraiLegendsStaking', function () {
       'Invalid input amount.',
     )
     await expect(staking.connect(users[0]).stake(amount(5_000_000))).to.be.revertedWith(
-      'ERC20: transfer amount exceeds balance',
+      'ERC20: insufficient allowance',
     )
     await expect(staking.connect(users[0]).stake(amount(20_000))).to.emit(
       staking,
