@@ -52,6 +52,7 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
     Fee public fee = Fee(0, 1000);
 
     mapping(address => bool) public isPair;
+    mapping(address => bool) public isWhitelisted;
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -409,16 +410,34 @@ contract ERC20WithFees is Context, IERC20, IERC20Metadata, AccessControl, Recove
         }
     }
 
+    
+    /**
+     * @notice Adds or removes a user address from getting taxed.
+     * @param user User address.
+     * @param value Boolean value to indicate whether we tax a pair or not.
+     */
+    function setWhitelist(address user, bool value) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        isWhitelisted[user] = value;
+        
+        if (value) {
+            emit WhitelistAdded(user);
+        } else {
+            emit WhitelistRemoved(user);
+        }
+    }
+
     /**
      * @notice Checks if address is excluded from paying fees.
      * The excluded addresses for now are the owner and the current KOKU's address.
      * @param account Address to check.
      */
     function isExcludedFromFees(address account) internal view returns (bool) {
-        return account == owner() || account == address(this);  
+        return account == owner() || account == address(this) || isWhitelisted[account];  
     }
 
     event FeeUpdated(uint numerator, uint denominator);
     event PairAdded(address account);
     event PairRemoved(address account);
+    event WhitelistAdded(address account);
+    event WhitelistRemoved(address account);
 }

@@ -110,6 +110,26 @@ describe('Koku', function () {
     await expect(koku.setPair(pair2.address, true)).to.emit(koku, 'PairAdded')
   })
 
+  it('Should let owner whitelist user3', async function () {
+    await expect(koku.connect(users[0]).setWhitelist(users[2].address, true)).to.be
+      .reverted
+
+    await expect(koku.setWhitelist(users[2].address, true)).to.emit(
+      koku,
+      'WhitelistAdded',
+    )
+    expect(await koku.isWhitelisted(users[2].address)).to.equal(true)
+    await expect(koku.setWhitelist(users[2].address, false)).to.emit(
+      koku,
+      'WhitelistRemoved',
+    )
+    expect(await koku.isWhitelisted(users[2].address)).to.equal(false)
+    await expect(koku.setWhitelist(users[2].address, true)).to.emit(
+      koku,
+      'WhitelistAdded',
+    )
+  })
+
   it('Should let owner add fees', async function () {
     let fee = await koku.fee()
     expect(fee.numerator).to.equal(0)
@@ -230,6 +250,18 @@ describe('Koku', function () {
     kokuBalance = kokuBalance.add(amount(10))
   })
 
+  it("Shouldn't tax Pair -> Whitelisted User", async function () {
+    const oldBalances = await balances(koku, pair1.address, users[2].address)
+    await expect(koku.connect(pair1).transfer(users[2].address, amount(100))).to.emit(
+      koku,
+      'Transfer',
+    )
+    const newBalances = await balances(koku, pair1.address, users[2].address)
+    expect(newBalances[0]).to.equal(oldBalances[0].sub(amount(100)))
+    expect(newBalances[1]).to.equal(oldBalances[1].add(amount(100)))
+    expect(newBalances[2]).to.equal(oldBalances[2])
+  })
+
   it('Should tax User -> Pair', async function () {
     const oldBalances = await balances(koku, users[0].address, pair1.address)
     await expect(koku.connect(users[0]).transfer(pair1.address, amount(100))).to.emit(
@@ -242,6 +274,18 @@ describe('Koku', function () {
     expect(newBalances[2]).to.equal(oldBalances[2].add(amount(10)))
 
     kokuBalance = kokuBalance.add(amount(10))
+  })
+
+  it("Shouldn't tax Whitelisted User -> Pair", async function () {
+    const oldBalances = await balances(koku, users[2].address, pair1.address)
+    await expect(koku.connect(users[2]).transfer(pair1.address, amount(100))).to.emit(
+      koku,
+      'Transfer',
+    )
+    const newBalances = await balances(koku, users[2].address, pair1.address)
+    expect(newBalances[0]).to.equal(oldBalances[0].sub(amount(100)))
+    expect(newBalances[1]).to.equal(oldBalances[1].add(amount(100)))
+    expect(newBalances[2]).to.equal(oldBalances[2])
   })
 
   it('Should tax Pair -> Pair', async function () {
