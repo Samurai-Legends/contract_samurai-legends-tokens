@@ -4,7 +4,7 @@ import { ethers } from 'hardhat'
 import ms from 'ms'
 
 // eslint-disable-next-line node/no-missing-import
-import { SamuraiLegends, SamuraiLegendsStaking } from '../typechain'
+import { SamuraiLegends, SamuraiLegendsStaking } from '../typechain-types'
 
 const amount = (value: number) => ethers.utils.parseUnits(value.toString(), 9)
 const s = (value: string) => Math.floor(ms(value) / 1000)
@@ -26,10 +26,10 @@ describe('SamuraiLegendsStaking', function () {
     const SamuraiLegends = await ethers.getContractFactory('SamuraiLegends')
     const SamuraiLegendsStaking = await ethers.getContractFactory('SamuraiLegendsStaking')
 
-    smg = await SamuraiLegends.deploy()
+    smg = (await SamuraiLegends.deploy()) as SamuraiLegends
     await smg.deployed()
 
-    staking = await SamuraiLegendsStaking.deploy(smg.address)
+    staking = (await SamuraiLegendsStaking.deploy(smg.address)) as SamuraiLegendsStaking
     await staking.deployed()
 
     console.log(`
@@ -246,6 +246,9 @@ describe('SamuraiLegendsStaking', function () {
 
   it('Should let the owner recover stucked ERC20 tokens', async function () {
     expect(await smg.balanceOf(staking.address)).to.not.equal(0)
+    await expect(
+      staking.recoverERC20(smg.address, (await smg.balanceOf(staking.address)).mul(2)),
+    ).to.be.revertedWith('Invalid input amount.')
     await expect(
       staking.recoverERC20(smg.address, await smg.balanceOf(staking.address)),
     ).to.emit(smg, 'Transfer')

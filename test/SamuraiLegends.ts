@@ -1,19 +1,11 @@
 import { expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { ethers } from 'hardhat'
-import ms from 'ms'
 
 // eslint-disable-next-line node/no-missing-import
-import { SamuraiLegends } from '../typechain'
+import { SamuraiLegends } from '../typechain-types'
 
 const amount = (value: number) => ethers.utils.parseUnits(value.toString(), 9)
-const s = (value: string) => Math.floor(ms(value) / 1000)
-const toFuture = async (value: string) => {
-  const blockNumber = await ethers.provider.getBlockNumber()
-  const { timestamp } = await ethers.provider.getBlock(blockNumber)
-
-  await ethers.provider.send('evm_mine', [timestamp + s(value)])
-}
 
 describe('SamuraiLegendsStaking', function () {
   let smg: SamuraiLegends
@@ -23,7 +15,7 @@ describe('SamuraiLegendsStaking', function () {
     ;[owner] = await ethers.getSigners()
     const SamuraiLegends = await ethers.getContractFactory('SamuraiLegends')
 
-    smg = await SamuraiLegends.deploy()
+    smg = (await SamuraiLegends.deploy()) as SamuraiLegends
     await smg.deployed()
 
     console.log(`

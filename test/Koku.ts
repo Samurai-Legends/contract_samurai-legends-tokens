@@ -4,7 +4,7 @@ import { ethers } from 'hardhat'
 import ms from 'ms'
 
 // eslint-disable-next-line node/no-missing-import
-import { Koku } from '../typechain'
+import { Koku } from '../typechain-types'
 import { BigNumber } from 'ethers'
 
 const amount = (value: number, decimals = 9) =>
@@ -57,7 +57,7 @@ describe('Koku', function () {
     const Koku = await ethers.getContractFactory('Koku')
     accounts = [pair1, pair2, game, ...users]
 
-    koku = await Koku.deploy()
+    koku = (await Koku.deploy()) as Koku
     await koku.deployed()
 
     console.log(`

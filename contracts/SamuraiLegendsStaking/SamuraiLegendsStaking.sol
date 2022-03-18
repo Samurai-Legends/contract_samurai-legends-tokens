@@ -387,7 +387,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         
         // interactions
         uint feeAmount = amount * fee.numerator / fee.denominator;
-        require(_token.transfer(msg.sender, amount - feeAmount), "Transfer failed.");
+        _token.transfer(msg.sender, amount - feeAmount);
 
         emit Claimed(msg.sender, amount);
     }
@@ -435,7 +435,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
         _rewardUpdatedAt = uint32(block.timestamp);
 
         // interactions
-        require(_token.transfer(owner(), _reward), "Transfer failed.");
+        _token.transfer(owner(), _reward);
 
         emit RewardDecreased(_reward);
     }
@@ -458,7 +458,7 @@ contract SamuraiLegendsStaking is Ownable, Pausable, Generatable, Recoverable {
             rewardFinishedAt = uint32(block.timestamp);
 
             // interactions
-            require(_token.transfer(owner(), remainingReward), "Transfer failed.");
+            _token.transfer(owner(), remainingReward);
         }
 
         emit RewardReseted();

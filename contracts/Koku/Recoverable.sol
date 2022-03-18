@@ -19,6 +19,6 @@ contract Recoverable is Ownable {
         IERC20 erc20 = IERC20(token);
         require(erc20.balanceOf(address(this)) >= amount, "Invalid input amount.");
 
-        require(erc20.transfer(owner(), amount), "Recover failed");
+        erc20.transfer(owner(), amount);
     }
 }
