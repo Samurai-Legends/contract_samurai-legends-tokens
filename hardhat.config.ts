@@ -44,7 +44,7 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    bsc_mainnet: {
+    bsc: {
       url: process.env.RPC,
       accounts: [process.env.PRIVATE_KEY!],
     },
