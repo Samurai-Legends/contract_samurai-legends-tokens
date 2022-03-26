@@ -3,23 +3,23 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers } from "hardhat";
+import { ethers } from 'hardhat'
 
 async function main() {
-  const [owner] = await ethers.getSigners();
-  const Koku = await ethers.getContractFactory("Koku");
+  const [owner] = await ethers.getSigners()
+  const Koku = await ethers.getContractFactory('Koku')
 
-  const koku = await Koku.deploy();
-  await koku.deployed();
+  const koku = await Koku.deploy()
+  await koku.deployed()
 
   console.log(`
 Koku deployed to: ${koku.address}
-Owner address: ${owner.address}`);
+Owner address: ${owner.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.error(error)
+  process.exitCode = 1
+})

@@ -20,7 +20,7 @@ Koku deployed to: ${koku.address}
 Owner address: ${owner.address}`)
 
   // verify
-  await exec(`npx hardhat verify --network bsc_testnet ${koku.address}`)
+  await exec(`npx hardhat verify --network bsc ${koku.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

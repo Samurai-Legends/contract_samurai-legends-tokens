@@ -10,17 +10,17 @@ const exec = util.promisify(require('child_process').exec)
 
 async function main() {
   const [owner] = await ethers.getSigners()
-  const Koku = await ethers.getContractFactory('Koku')
+  const SamuraiLegends = await ethers.getContractFactory('SamuraiLegends')
 
-  const koku = await Koku.deploy()
-  await koku.deployed()
+  const smg = await SamuraiLegends.deploy()
+  await smg.deployed()
 
   console.log(`
-Koku deployed to: ${koku.address}
+SamuraiLegends deployed to: ${smg.address}
 Owner address: ${owner.address}`)
 
   // verify
-  await exec(`npx hardhat verify --network bsc_testnet ${koku.address}`)
+  await exec(`npx hardhat verify --network bsc_testnet ${smg.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -3,39 +3,37 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import util from "util";
-import { ethers } from "hardhat";
+import util from 'util'
+import { ethers } from 'hardhat'
 
-const exec = util.promisify(require("child_process").exec);
+const exec = util.promisify(require('child_process').exec)
 
 async function main() {
-  const [owner] = await ethers.getSigners();
-  const SamuraiLegends = await ethers.getContractFactory("SamuraiLegends");
-  const SamuraiLegendsStaking = await ethers.getContractFactory(
-    "SamuraiLegendsStaking"
-  );
+  const [owner] = await ethers.getSigners()
+  const SamuraiLegends = await ethers.getContractFactory('SamuraiLegends')
+  const SamuraiLegendsStaking = await ethers.getContractFactory('SamuraiLegendsStaking')
 
-  const smg = await SamuraiLegends.deploy();
-  await smg.deployed();
+  const smg = await SamuraiLegends.deploy()
+  await smg.deployed()
 
-  const samuraiLegendsStaking = await SamuraiLegendsStaking.deploy(smg.address);
-  await samuraiLegendsStaking.deployed();
+  const samuraiLegendsStaking = await SamuraiLegendsStaking.deploy(smg.address)
+  await samuraiLegendsStaking.deployed()
 
   console.log(`
 SamuraiLegends deployed to: ${smg.address}
 SamuraiLegendsStaking deployed to: ${samuraiLegendsStaking.address}
-Owner address: ${owner.address}`);
+Owner address: ${owner.address}`)
 
   // verify=
-  await exec(`npx hardhat verify --network bsc_testnet ${smg.address}`);
+  await exec(`npx hardhat verify --network bsc_testnet ${smg.address}`)
   await exec(
-    `npx hardhat verify --network bsc_testnet ${samuraiLegendsStaking.address} ${smg.address}`
-  );
+    `npx hardhat verify --network bsc_testnet ${samuraiLegendsStaking.address} ${smg.address}`,
+  )
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.error(error)
+  process.exitCode = 1
+})
