@@ -44,11 +44,13 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    bsc_mainnet: {
+      url: process.env.RPC,
+      accounts: [process.env.PRIVATE_KEY!],
+    },
     bsc_testnet: {
-      url: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
+      url: process.env.RPC,
+      accounts: process.env.PRIVATE_KEYS!.split(',').map((e) => e.trim()),
     },
   },
   gasReporter: {
