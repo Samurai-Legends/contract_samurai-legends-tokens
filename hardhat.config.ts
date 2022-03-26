@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
     },
     bsc_testnet: {
       url: process.env.RPC,
-      accounts: process.env.PRIVATE_KEYS!.split(',').map((e) => e.trim()),
+      accounts: process.env.PRIVATE_KEY!.split(',').map((e) => e.trim()),
     },
   },
   gasReporter: {
