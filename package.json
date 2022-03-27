@@ -8,6 +8,7 @@
     "deploy:smg:testnet": "hardhat run scripts/deploy_SamuraiLegends_testnet.ts --network bsc_testnet",
     "deploy:smg:mainnet": "hardhat run scripts/deploy_SamuraiLegends_mainnet.ts --network bsc",
     "deploy:staking:hardhat": "hardhat run scripts/deploy_SamuraiLegendsStaking_hardhat.ts",
+    "deploy:staking:localhost": "hardhat run scripts/deploy_SamuraiLegendsStaking_hardhat.ts --network localhost",
     "deploy:staking:testnet": "hardhat run scripts/deploy_SamuraiLegendsStaking_testnet.ts --network bsc_testnet",
     "deploy:staking:mainnet": "hardhat run scripts/deploy_SamuraiLegendsStaking_mainnet.ts --network bsc"
   },

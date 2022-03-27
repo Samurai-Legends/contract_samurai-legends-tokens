@@ -44,6 +44,12 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    hardhat: {
+      mining: {
+        auto: true,
+        interval: 1000,
+      },
+    },
     bsc: {
       url: process.env.RPC,
       accounts: [process.env.PRIVATE_KEY!],
