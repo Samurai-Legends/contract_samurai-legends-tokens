@@ -16,8 +16,8 @@ contract Koku is ERC20WithFees {
      * adminMintableTokensHardCap Maximum amount of tokens that can minted by an admin at once.
      */
     uint32 public lastTimeAdminMintedAt;
-    uint112 public adminMintableTokensPerSecond = 0.005 * 1e9;
-    uint112 public adminMintableTokensHardCap = 10_000 * 1e9;
+    uint112 public adminMintableTokensPerSecond = 15.63 * 1e9;
+    uint112 public adminMintableTokensHardCap = 10_000_000 * 1e9;
 
     /**
      * @notice lastTimeGameMintedAt The last time the game minted new tokens.
@@ -25,8 +25,8 @@ contract Koku is ERC20WithFees {
      * gameMintableTokensHardCap Maximum amount of tokens that can minted by the game at once.
      */
     uint32 public lastTimeGameMintedAt;
-    uint112 public gameMintableTokensPerSecond = 0.1 * 1e9;
-    uint112 public gameMintableTokensHardCap = 10_000 * 1e9;
+    uint112 public gameMintableTokensPerSecond = 82.67 * 1e9;
+    uint112 public gameMintableTokensHardCap = 50_000_000 * 1e9;
 
     constructor() ERC20WithFees("Koku", "KOKU")  {
         /**
@@ -36,10 +36,10 @@ contract Koku is ERC20WithFees {
         _setupRole(MINTER_ROLE, msg.sender);
 
         /**
-         * @notice Mints an initial 100k KOKU.
+         * @notice Initial KOKU's mint.
          */
         lastTimeAdminMintedAt = uint32(block.timestamp);
-        _mint(msg.sender, 100_000 * 1e9);
+        _mint(msg.sender, 25_000_000 * 1e9);
     }
 
     function decimals() public view virtual override returns (uint8) {

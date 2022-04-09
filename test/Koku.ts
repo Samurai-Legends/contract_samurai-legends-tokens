@@ -70,9 +70,13 @@ describe('Koku', function () {
 `)
   })
 
-  it('Should check 100k initial mint', async function () {
-    expect(await koku.totalSupply()).to.equal(amount(100_000))
-    expect(await koku.balanceOf(owner.address)).to.equal(amount(100_000))
+  after(async () => {
+    await ethers.provider.send('evm_mine', [])
+  })
+
+  it('Should check 25m initial mint', async function () {
+    expect(await koku.totalSupply()).to.equal(amount(25_000_000))
+    expect(await koku.balanceOf(owner.address)).to.equal(amount(25_000_000))
   })
 
   it('Should check admin roles', async function () {
@@ -373,7 +377,8 @@ describe('Koku', function () {
       await koku.adminMintableTokensPerSecond(),
       await koku.adminMintableTokensHardCap(),
     )
-    await expect(koku.specialMint(mintableTokens.add(amount(1)))).to.be.revertedWith(
+
+    await expect(koku.specialMint(mintableTokens.add(amount(20)))).to.be.revertedWith(
       'amount exceeds the mintable tokens amount.',
     )
 
@@ -522,7 +527,7 @@ describe('Koku', function () {
           mintableTokens.mul(30).div(100).add(1),
           mintableTokens.mul(20).div(100).add(1),
         ],
-        mintableTokens.add(amount(3)),
+        mintableTokens.add(amount(100)),
       ),
     ).to.be.revertedWith('valuesSum exceeds the mintable tokens amount.')
 
